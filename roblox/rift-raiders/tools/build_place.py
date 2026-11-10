@@ -137,9 +137,12 @@ def reref(subtree, prefix):
         p = props(it)
         if p is None:
             continue
-        for prop in p:
+        for prop in list(p):
             if prop.tag == "Ref" and prop.text in mapping:
                 prop.text = mapping[prop.text]
+            elif prop.tag == "UniqueId":
+                # Studio refuses places with duplicate UniqueId/HistoryId; it assigns fresh ones when absent
+                p.remove(prop)
     return subtree
 
 
