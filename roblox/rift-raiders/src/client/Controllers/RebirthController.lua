@@ -43,7 +43,7 @@ function RebirthController.Start()
 		Parent = leftCard,
 	})
 	Text({
-		Text = ("<b>🔄 Resets</b>\ncoins, trained Speed, treadmill, enclosure, incubator and Rift Keys\n\n<b>✅ Keeps</b>\npets (extras go to storage), Index, trails, Rift Shards, stats\n\n<b>🎁 Each rebirth</b>\n+%d%% income · +%d%% training · 💎 %d shards"):format(
+		Text = ("<b>🔄 Resets</b>\ncoins, trained Speed, treadmill, enclosure, incubator and Rift Keys\n\n<b>✅ Keeps</b>\ncharacters (extras go to storage), Index, trails, Rift Shards, stats\n\n<b>🎁 Each rebirth</b>\n+%d%% income · +%d%% training · 💎 %d shards"):format(
 			math.floor(Rebirth.IncomeBonusPerRebirth * 100),
 			math.floor(Rebirth.TrainingBonusPerRebirth * 100),
 			Rebirth.ShardsPerRebirth
@@ -103,7 +103,7 @@ function RebirthController.Start()
 		end
 		Components.Confirm({
 			Title = "Rebirth?",
-			Text = ("You will lose your coins, Speed, upgrades and Rift Keys.\nYou keep your pets, Index, trails and shards, and gain <b>+%d%% income</b> forever."):format(
+			Text = ("You will lose your coins, Speed, upgrades and Rift Keys.\nYou keep your characters, Index, trails and shards, and gain <b>+%d%% income</b> forever."):format(
 				math.floor(Rebirth.IncomeBonusPerRebirth * 100)
 			),
 			ConfirmText = "Hold to rebirth",

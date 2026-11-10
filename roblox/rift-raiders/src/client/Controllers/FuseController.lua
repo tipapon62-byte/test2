@@ -68,7 +68,7 @@ function FuseController.Start()
 	-- ===== left: picker =====
 	local left = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(0, 372, 1, 0), Parent = body })
 	Text({
-		Text = "Pick 3 identical pets\n(same species & tier)",
+		Text = "Pick 3 identical characters\n(same character & tier)",
 		TextSize = 17,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Size = UDim2.new(1, -170, 0, 50),
@@ -188,14 +188,14 @@ function FuseController.Start()
 
 		local lines = {}
 		if #selection < 3 then
-			resultText.Text = ("Select <b>%d</b> more pet%s"):format(3 - #selection, if 3 - #selection == 1 then "" else "s")
+			resultText.Text = ("Select <b>%d</b> more character%s"):format(3 - #selection, if 3 - #selection == 1 then "" else "s")
 			Components.SetEnabled(fuseBtn, false)
 			Components.SetText(fuseBtn, "🔮 FUSE")
 		elseif not preview then
 			resultText.Text = "Checking the machine..."
 			Components.SetEnabled(fuseBtn, false)
 		elseif not preview.Ok then
-			resultText.Text = ("<font color=\"#%s\">%s</font>"):format(Theme.Colors.Bad:ToHex(), preview.Error or "These pets can't be fused.")
+			resultText.Text = ("<font color=\"#%s\">%s</font>"):format(Theme.Colors.Bad:ToHex(), preview.Error or "These characters can't be fused.")
 			Components.SetEnabled(fuseBtn, false)
 		else
 			local r = preview.Result or {}
@@ -221,7 +221,7 @@ function FuseController.Start()
 			Components.SetText(fuseBtn, (if preview.NeedsDoubleConfirm then "⚠️ " else "🔮 ") .. "FUSE · " .. Components.Price("Coins", r.Cost or 0))
 			Components.SetEnabled(fuseBtn, preview.Token ~= nil and affordable)
 		end
-		table.insert(lines, "<i>Fusion is permanent: the 3 pets are consumed. 🔒 Locked pets can't be used.</i>")
+		table.insert(lines, "<i>Fusion is permanent: the 3 characters are consumed. 🔒 Locked characters can't be used.</i>")
 		notesText.Text = table.concat(lines, "\n")
 	end
 
@@ -268,7 +268,7 @@ function FuseController.Start()
 			return
 		end
 		if pet.Locked then
-			Components.Toast("🔒 Unlock this pet in the Pets window before fusing it.", "warn")
+			Components.Toast("🔒 Unlock this character in the Characters window before fusing it.", "warn")
 			return
 		end
 		local idx = table.find(selection, uid)
@@ -372,7 +372,7 @@ function FuseController.Start()
 		local first = selection[1] and all[selection[1]]
 		local pick = FuseController.AutoPick(all, first and groupKey(first) or nil) or FuseController.AutoPick(all, nil)
 		if not pick then
-			Components.Toast("You need 3 unlocked copies of the same pet and tier.", "warn")
+			Components.Toast("You need 3 unlocked copies of the same character and tier.", "warn")
 			return
 		end
 		selection = pick
@@ -403,7 +403,7 @@ function FuseController.Start()
 		for _, w in ipairs(p.Warnings or {}) do
 			table.insert(warnings, ("<font color=\"#%s\">⚠️ %s</font>"):format(Theme.Colors.Bad:ToHex(), w))
 		end
-		local text = "These pets will be consumed <b>forever</b>:\n" .. table.concat(names, "\n") .. (if #warnings > 0 then "\n" .. table.concat(warnings, "\n") else "")
+		local text = "These characters will be consumed <b>forever</b>:\n" .. table.concat(names, "\n") .. (if #warnings > 0 then "\n" .. table.concat(warnings, "\n") else "")
 		local settings = ClientData.Get().Settings or {}
 		if p.NeedsDoubleConfirm then
 			Components.Confirm({
@@ -417,7 +417,7 @@ function FuseController.Start()
 			})
 		elseif settings.ConfirmFuse ~= false then
 			Components.Confirm({
-				Title = "Fuse these pets?",
+				Title = "Fuse these characters?",
 				Text = text,
 				Height = 360,
 				ConfirmText = "🔮 Fuse",

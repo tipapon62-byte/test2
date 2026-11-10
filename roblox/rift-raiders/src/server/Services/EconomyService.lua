@@ -207,7 +207,7 @@ function EconomyService.Start()
 		local earned = math.floor(away * income * E.OfflineIncomeRate)
 		if earned > 0 and player.Parent then
 			Services.DataService.AddCoins(player, earned, true)
-			notify(player, ("Welcome back! Your pets earned %s coins while you were away."):format(GameConfig.FormatNumber(earned)), "good")
+			notify(player, ("Welcome back! Your characters earned %s coins while you were away."):format(GameConfig.FormatNumber(earned)), "good")
 		end
 	end)
 

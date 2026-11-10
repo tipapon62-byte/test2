@@ -1,4 +1,5 @@
--- InventoryController: the Pets window — grid of owned pets with 3D previews, filters, sort,
+-- InventoryController: the Characters window (internal name "Pets") — grid of owned multiverse
+-- characters with 3D previews, filters, sort,
 -- a detail panel (place/store, lock, sell, rename, mutation potion) and "sell duplicates".
 -- All actions go through PetAction; the server re-checks ownership, locks and slots.
 
@@ -68,7 +69,7 @@ local function signature(pet): string
 end
 
 function InventoryController.Start()
-	local win = Components.Window("Pets", "My Pets", Theme.Icons.Pets, { TitleColor = Theme.Buttons.Pets })
+	local win = Components.Window("Pets", "My Characters", Theme.Icons.Pets, { TitleColor = Theme.Buttons.Pets })
 	local body = win.Body
 
 	local left = New("Frame", { Name = "Left", BackgroundTransparency = 1, Size = UDim2.new(1, -312, 1, 0), Parent = body })
@@ -122,7 +123,7 @@ function InventoryController.Start()
 		Parent = left,
 	})
 	local dupBtn = Components.Button({
-		Text = "🧹 Sell duplicates",
+		Text = "🧹 Sell extra copies",
 		TextSize = 19,
 		Color = Theme.Colors.Warn,
 		Size = UDim2.fromOffset(220, 48),
@@ -135,7 +136,7 @@ function InventoryController.Start()
 		Size = UDim2.new(1, 0, 1, -112),
 	})
 	local emptyLabel = Text({
-		Text = "No pets here yet.\nGrab an egg from a rift nest and run it home! 🥚",
+		Text = "No characters here yet.\nSteal a character egg from a rift nest and run it home! 🥚",
 		TextSize = 22,
 		TextColor3 = Theme.Colors.TextDim,
 		Size = UDim2.new(1, 0, 0, 80),
@@ -148,7 +149,7 @@ function InventoryController.Start()
 	Components.Padding(detail, 10)
 	Components.List(detail, 6, false, Enum.HorizontalAlignment.Center)
 	local previewHolder = New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 108), LayoutOrder = 1, Parent = detail })
-	local dTitle = Text({ Text = "Select a pet", TextSize = 21, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 2, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, Parent = detail })
+	local dTitle = Text({ Text = "Select a character", TextSize = 21, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 2, TextTruncate = Enum.TextTruncate.AtEnd, TextWrapped = false, Parent = detail })
 	local dInfo = Text({
 		Text = "",
 		TextSize = 15,
@@ -243,8 +244,8 @@ function InventoryController.Start()
 		local pet = selected and pets()[selected]
 		if not pet then
 			selected = nil
-			dTitle.Text = "Select a pet"
-			dInfo.Text = "Tap a pet to see its stats."
+			dTitle.Text = "Select a character"
+			dInfo.Text = "Tap a character to see its stats."
 			previewKey = ""
 			Components.Clear(previewHolder)
 			nameBox.Visible = false
@@ -288,7 +289,7 @@ function InventoryController.Start()
 			Components.SetColor(placeBtn, Theme.Colors.Info)
 			Components.SetEnabled(placeBtn, true)
 		else
-			Components.SetText(placeBtn, if placed >= slots then "Pen full" else "🏠 Place")
+			Components.SetText(placeBtn, if placed >= slots then "Base full" else "🏠 Place")
 			Components.SetColor(placeBtn, Theme.Colors.Good)
 			Components.SetEnabled(placeBtn, placed < slots)
 		end
@@ -445,7 +446,7 @@ function InventoryController.Start()
 			return
 		end
 		Components.Confirm({
-			Title = "Sell pet?",
+			Title = "Sell character?",
 			Text = ("Sell <b>%s</b> for <font color=\"#FFCD32\">🪙 %s</font>?\nThis cannot be undone."):format(GameConfig.PetDisplayName(pet), Fmt(GameConfig.PetSellValue(pet))),
 			ConfirmText = "💰 Sell",
 			Danger = true,
@@ -488,8 +489,8 @@ function InventoryController.Start()
 			return
 		end
 		Components.Confirm({
-			Title = "Sell duplicates?",
-			Text = ("Sell <b>%d</b> duplicate pet%s for about <font color=\"#FFCD32\">🪙 %s</font>.\nYour best copy of each species and every 🔒 locked pet are kept."):format(
+			Title = "Sell extra copies?",
+			Text = ("Sell <b>%d</b> duplicate character%s for about <font color=\"#FFCD32\">🪙 %s</font>.\nYour best copy of each character and every 🔒 locked character are kept."):format(
 				#uids,
 				if #uids == 1 then "" else "s",
 				Fmt(value)

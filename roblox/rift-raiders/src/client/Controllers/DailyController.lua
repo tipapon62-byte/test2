@@ -30,7 +30,7 @@ local function rewardText(r): string
 	end
 	if r.Item then
 		local item = Economy.Items[r.Item]
-		table.insert(parts, ("%dx %s"):format(r.Amount or 1, item and item.Name or r.Item))
+		table.insert(parts, ("%dx %s"):format(r.Amount or 1, Theme.Reword(item and item.Name or r.Item)))
 	end
 	if r.Egg then
 		for _, e in ipairs(Economy.ShardEggs) do
@@ -161,7 +161,7 @@ function DailyController.Start()
 			Parent = parent,
 		})
 		Text({
-			Text = def.Text,
+			Text = Theme.Reword(def.Text),
 			TextSize = 19,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Size = UDim2.new(1, -230, 0, 28),
@@ -250,7 +250,7 @@ function DailyController.Start()
 			})
 			Text({ Text = if done then "🏅" else "🎯", TextSize = 34, Outline = false, Size = UDim2.fromOffset(56, 72), Parent = row })
 			Text({
-				Text = a.Text,
+				Text = Theme.Reword(a.Text),
 				TextSize = 18,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.new(1, -200, 0, 28),
