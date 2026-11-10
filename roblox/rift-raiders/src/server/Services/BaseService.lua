@@ -148,34 +148,27 @@ local function setupBase(model: Model, index: number)
 		laser.Transparency = 0.6
 	end
 
-	for i, spot in ipairs(INCUBATOR_SPOTS) do
-		local pad = safeBuild("BuildIncubator")
-		if not pad then
-			break
-		end
-		pad.Name = "Pad" .. i
-		pad:SetAttribute("Pad", i)
-		pad:PivotTo(BaseService.LocalToWorld(info, spot[1], spot[2]) * CFrame.Angles(0, math.pi, 0))
-		pad.Parent = incubators
-		info.Pads[i] = pad
-	end
+	-- eggs hatch directly on enclosure slots (no incubator machines); props scale with the base
+	local scale = math.clamp(info.Depth / 97, 0.4, 1)
+	info.Scale = scale
 	local fuse = safeBuild("BuildFuseMachine")
 	if fuse then
 		fuse.Name = "FuseMachine"
-		fuse:PivotTo(BaseService.LocalToWorld(info, 30, 50) * CFrame.Angles(0, -math.pi / 2, 0))
+		fuse:ScaleTo(fuse:GetScale() * math.max(scale, 0.6))
+		fuse:PivotTo(BaseService.LocalToWorld(info, info.HalfWidth * 0.5, info.Depth * 0.52) * CFrame.Angles(0, -math.pi / 2, 0))
 		fuse.Parent = info.Runtime
 	end
 	local shop = safeBuild("BuildShopTerminal")
 	if shop then
 		shop.Name = "ShopTerminal"
-		shop:PivotTo(BaseService.LocalToWorld(info, 22, 9) * CFrame.Angles(0, math.pi, 0))
+		shop:ScaleTo(shop:GetScale() * math.max(scale, 0.7))
+		shop:PivotTo(BaseService.LocalToWorld(info, info.HalfWidth * 0.38, info.Depth * 0.1) * CFrame.Angles(0, math.pi, 0))
 		shop.Parent = info.Runtime
 	end
 
 	table.insert(bases, info)
 	byModel[model] = info
 	BaseService.SetVisualFloors(info, 1)
-	BaseService.SetPadCount(info, 0)
 	BaseService.RefreshSign(info)
 end
 

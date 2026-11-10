@@ -32,6 +32,12 @@ local function freeSlot(profile): number?
 			used[pet.Slot] = true
 		end
 	end
+	for key in pairs(profile.Incubators or {}) do
+		local n = tonumber(key)
+		if n then
+			used[n] = true -- an egg is hatching there
+		end
+	end
 	for i = 1, slotsOf(profile) do
 		if not used[i] then
 			return i
@@ -39,6 +45,7 @@ local function freeSlot(profile): number?
 	end
 	return nil
 end
+PetService.FreeSlot = freeSlot
 
 local function recalcIncome(player: Player)
 	local profile = Services.DataService.Get(player)
@@ -187,7 +194,7 @@ local function checkBiomeComplete(player: Player, profile, biomeId: string)
 end
 
 -- Adds a pet (placed if a slot is free). Returns (pet, isNewSpecies).
-function PetService.AddPet(player: Player, pet): (any, boolean)
+function PetService.AddPet(player: Player, pet, preferredSlot: number?): (any, boolean)
 	local profile = Services.DataService.Get(player)
 	local count = Util.Count(profile.Pets)
 	if count >= slotsOf(profile) + E.InventoryCap then
@@ -197,7 +204,7 @@ function PetService.AddPet(player: Player, pet): (any, boolean)
 		Services.DataService.Notify(player, ("Pet storage full — %s was sold for %s coins."):format(GameConfig.PetDisplayName(pet), GameConfig.FormatNumber(value)), "warn")
 		return pet, false
 	end
-	pet.Slot = freeSlot(profile)
+	pet.Slot = if preferredSlot and preferredSlot <= slotsOf(profile) then preferredSlot else freeSlot(profile)
 	profile.Pets[pet.Uid] = pet
 	local isNew = profile.Index[pet.Species] == nil
 	local entry = profile.Index[pet.Species] or { First = os.time(), Count = 0 }
@@ -216,7 +223,7 @@ function PetService.AddPet(player: Player, pet): (any, boolean)
 	return pet, isNew
 end
 
-function PetService.HatchEgg(player: Player, egg)
+function PetService.HatchEgg(player: Player, egg, slot: number?)
 	local species = egg.Species and GameConfig.GetSpecies(egg.Species)
 	if not species then
 		local pool = GameConfig.GetSpeciesPool(egg.Biome, egg.Rarity)
@@ -245,7 +252,7 @@ function PetService.HatchEgg(player: Player, egg)
 		Kg = math.floor(kg * 10) / 10,
 		Obtained = os.time(),
 	}
-	local _, isNew = PetService.AddPet(player, pet)
+	local _, isNew = PetService.AddPet(player, pet, slot)
 	local profile = Services.DataService.Get(player)
 	profile.Stats.PetsHatched += 1
 	Services.QuestService.Track(player, "PetsHatched", 1)
