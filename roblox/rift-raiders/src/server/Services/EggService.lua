@@ -75,6 +75,22 @@ local function rollRarity(biome, rarityBoost: number): string
 	return Util.WeightedPick(w, R.Order) or "Common"
 end
 
+-- Every egg holds one specific character: pick it from the biome + rarity pool (once).
+-- The egg's rarity then matches the character exactly.
+function EggService.AssignSpecies(data)
+	if data.Species and GameConfig.GetSpecies(data.Species) then
+		data.Rarity = GameConfig.GetSpecies(data.Species).Rarity
+		return data
+	end
+	local pool = GameConfig.GetSpeciesPool(data.Biome, data.Rarity)
+	local s = pool[math.random(math.max(#pool, 1))]
+	if s then
+		data.Species = s.Id
+		data.Rarity = s.Rarity
+	end
+	return data
+end
+
 function EggService.BestBiome(profile)
 	local best = GameConfig.Biomes[1]
 	for _, b in ipairs(GameConfig.Biomes) do
@@ -112,7 +128,7 @@ local function setPrompt(egg: WorldEgg, enabled: boolean)
 end
 
 local function buildEggModel(data): Model
-	local ok, model = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation })
+	local ok, model = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation, Species = data.Species })
 	if not ok or not model then
 		warn("[EggService] BuildEgg failed:", model)
 		model = Instance.new("Model")
@@ -158,6 +174,7 @@ local function spawnInNest(nest: BasePart, override: any?)
 		Size = rollSize(),
 		Mutation = rollMutation(event and event.MutationBoost or 1, event and event.EventMutation),
 	}
+	EggService.AssignSpecies(data)
 	local egg: WorldEgg = {
 		Data = data,
 		Model = buildEggModel(data),
@@ -408,6 +425,7 @@ function EggService.GiveEgg(player: Player, data): boolean
 	if not profile then
 		return false
 	end
+	EggService.AssignSpecies(data)
 	local slot = hatchingCount(profile) < hatchCapacity(profile) and Services.PetService.FreeSlot(profile)
 	if slot then
 		startOnSlot(profile, slot, data)
@@ -459,7 +477,7 @@ local function deliver(player: Player, egg: WorldEgg)
 	if not EggService.HasFreeStorage(player) then
 		if os.clock() - (fullWarned[player] or 0) > 5 then
 			fullWarned[player] = os.clock()
-			Services.DataService.Notify(player, "Your enclosure and egg queue are full! Sell pets or upgrade your base.", "warn")
+			Services.DataService.Notify(player, "Your enclosure and egg queue are full! Sell characters or upgrade your base.", "warn")
 		end
 		return
 	end
@@ -513,7 +531,7 @@ function EggService.RefreshEggs(player: Player)
 			continue
 		end
 		local cf = Services.BaseService.GetSlotCFrame(info, tonumber(key) :: number)
-		local ok, m = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation })
+		local ok, m = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation, Species = data.Species })
 		if cf and ok and m then
 			m.Name = "HatchingEgg"
 			m:SetAttribute("Uid", data.Uid)

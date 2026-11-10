@@ -22,7 +22,8 @@ local player = Players.LocalPlayer
 local LeaderboardController = {}
 
 local PREFERRED = { "Speed", "Income", "RarePets", "Retrievals" }
-local ICONS = { Speed = "⚡", Income = "📈", RarePets = "🦄", Retrievals = "🥚" }
+local ICONS = { Speed = "⚡", Income = "📈", RarePets = "🌟", Retrievals = "🥚" }
+local LABELS = { RarePets = "Rare Crew" }
 local MEDALS = { "🥇", "🥈", "🥉" }
 local REFRESH_COOLDOWN = 10
 
@@ -53,7 +54,7 @@ function LeaderboardController.Start()
 	local ids = statOrder()
 	local tabDefs = {}
 	for _, id in ipairs(ids) do
-		table.insert(tabDefs, { Id = id, Text = (ICONS[id] or "🏆") .. " " .. id })
+		table.insert(tabDefs, { Id = id, Text = (ICONS[id] or "🏆") .. " " .. (LABELS[id] or id) })
 	end
 
 	local title = Text({ Text = "", TextSize = 24, Outline = 3, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -200, 0, 40), Position = UDim2.fromOffset(4, 62), Parent = body })
@@ -77,7 +78,7 @@ function LeaderboardController.Start()
 	local function render()
 		Components.Clear(list)
 		local cfg = Boards.Stats[current]
-		title.Text = (ICONS[current] or "🏆") .. " " .. (cfg and cfg.Title or current)
+		title.Text = (ICONS[current] or "🏆") .. " " .. Theme.Reword(cfg and cfg.Title or LABELS[current] or current)
 		local rows = cache[current]
 		if loading[current] and not rows then
 			Text({ Text = "Loading...", TextSize = 22, TextColor3 = Theme.Colors.TextDim, Size = UDim2.new(1, 0, 0, 40), Parent = list })
