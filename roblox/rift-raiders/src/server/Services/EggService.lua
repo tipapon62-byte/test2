@@ -42,7 +42,7 @@ type WorldEgg = {
 local eggs: { [string]: WorldEgg } = {}
 local carrying: { [Player]: WorldEgg } = {}
 local nestState: { [BasePart]: { Egg: WorldEgg?, RespawnAt: number, Zone: number } } = {}
-local padModels: { [Player]: { [number]: Model } } = {}
+local padModels: { [Player]: { [string]: Model } } = {}
 local fullWarned: { [Player]: number } = {}
 local eggFolder: Instance
 
@@ -357,55 +357,109 @@ function EggService.ReturnCarriedEgg(player: Player, reason: string?)
 	end
 end
 
+local function hatchCapacity(profile): number
+	return E.IncubatorLevels[math.clamp(profile.IncubatorLevel, 1, #E.IncubatorLevels)].Pads
+end
+
+local function hatchingCount(profile): number
+	return Util.Count(profile.Incubators)
+end
+
 function EggService.HasFreeStorage(player: Player): boolean
 	local profile = Services.DataService.Get(player)
 	if not profile then
 		return false
 	end
-	local pads = E.IncubatorLevels[math.clamp(profile.IncubatorLevel, 1, #E.IncubatorLevels)].Pads
-	for i = 1, pads do
-		if not profile.Incubators[tostring(i)] then
-			return true
-		end
+	if hatchingCount(profile) < hatchCapacity(profile) and Services.PetService.FreeSlot(profile) then
+		return true
 	end
 	return #profile.EggStorage < EGG_SHELF_CAP
 end
 
-local function startOnPad(player: Player, profile, pad: number, data)
+-- Eggs hatch ON an enclosure slot and turn into the pet in that same slot.
+local function startOnSlot(profile, slot: number, data)
 	local duration = GameConfig.HatchDuration(data.Rarity, data.Size, profile.IncubatorLevel)
 	data.Duration = duration
 	data.HatchAt = os.time() + duration
-	profile.Incubators[tostring(pad)] = data
+	profile.Incubators[tostring(slot)] = data
 end
 
--- Gives an owned egg: first free incubator pad, otherwise the egg shelf queue.
+-- Moves queued eggs onto free slots while hatch capacity allows. Returns true if anything moved.
+local function fillFromQueue(player: Player, profile): boolean
+	local moved = false
+	while #profile.EggStorage > 0 and hatchingCount(profile) < hatchCapacity(profile) do
+		local slot = Services.PetService.FreeSlot(profile)
+		if not slot then
+			break
+		end
+		startOnSlot(profile, slot, table.remove(profile.EggStorage, 1))
+		moved = true
+	end
+	if moved then
+		Services.DataService.Changed(player, "Incubators", "EggStorage")
+		EggService.RefreshEggs(player)
+	end
+	return moved
+end
+
+-- Gives an owned egg: a free slot if hatch capacity allows, otherwise the waiting queue.
 function EggService.GiveEgg(player: Player, data): boolean
 	local profile = Services.DataService.Get(player)
 	if not profile then
 		return false
 	end
-	local pads = E.IncubatorLevels[math.clamp(profile.IncubatorLevel, 1, #E.IncubatorLevels)].Pads
-	for i = 1, pads do
-		if not profile.Incubators[tostring(i)] then
-			startOnPad(player, profile, i, data)
-			Services.DataService.Changed(player, "Incubators")
-			EggService.RefreshPads(player)
-			return true
-		end
+	local slot = hatchingCount(profile) < hatchCapacity(profile) and Services.PetService.FreeSlot(profile)
+	if slot then
+		startOnSlot(profile, slot, data)
+		Services.DataService.Changed(player, "Incubators")
+		EggService.RefreshEggs(player)
+		return true
 	end
 	if #profile.EggStorage < EGG_SHELF_CAP then
 		table.insert(profile.EggStorage, data)
 		Services.DataService.Changed(player, "EggStorage")
+		Services.DataService.Notify(player, "No free slot right now — the egg is waiting in line and will hatch next.", "info")
 		return true
 	end
 	return false
+end
+
+-- Moves eggs on slots that are invalid (occupied, beyond the slot count after rebirth, or
+-- from older saves that used incubator pads) back into the queue.
+function EggService.Revalidate(player: Player)
+	local profile = Services.DataService.Get(player)
+	if not profile then
+		return
+	end
+	local occupied = {}
+	for _, pet in pairs(profile.Pets) do
+		if pet.Slot then
+			occupied[pet.Slot] = true
+		end
+	end
+	local maxSlots = E.BaseLevels[math.clamp(profile.BaseLevel, 1, #E.BaseLevels)].Slots
+	local changed = false
+	for key, data in pairs(profile.Incubators) do
+		local slot = tonumber(key)
+		if not slot or slot > maxSlots or occupied[slot] then
+			profile.Incubators[key] = nil
+			data.HatchAt = nil
+			table.insert(profile.EggStorage, 1, data)
+			changed = true
+		end
+	end
+	if changed then
+		Services.DataService.Changed(player, "Incubators", "EggStorage")
+	end
+	fillFromQueue(player, profile)
+	EggService.RefreshEggs(player)
 end
 
 local function deliver(player: Player, egg: WorldEgg)
 	if not EggService.HasFreeStorage(player) then
 		if os.clock() - (fullWarned[player] or 0) > 5 then
 			fullWarned[player] = os.clock()
-			Services.DataService.Notify(player, "Incubators and egg shelf are full! Upgrade the incubator or wait for a hatch.", "warn")
+			Services.DataService.Notify(player, "Your enclosure and egg queue are full! Sell pets or upgrade your base.", "warn")
 		end
 		return
 	end
@@ -425,86 +479,117 @@ local function deliver(player: Player, egg: WorldEgg)
 		Services.QuestService.Track(player, "EggsRetrieved", 1)
 	end
 	Services.DataService.Changed(player, "Stats")
-	Services.DataService.Notify(player, ("🥚 %s is yours! It's incubating now."):format(GameConfig.EggDisplayName(data)), "good")
+	Services.DataService.Effect(player, "Coins", { Amount = 0, Text = "🥚 SECURED!" })
+	Services.DataService.Notify(player, ("🥚 %s is yours! It's hatching in your enclosure."):format(GameConfig.EggDisplayName(data)), "good")
 end
 
--- ===== Incubator pads (visuals + hatching) =====
+-- ===== Eggs hatching on slots (visuals) =====
 
-function EggService.RefreshPads(player: Player)
+function EggService.RefreshEggs(player: Player)
 	local info = Services.BaseService.GetBase(player)
 	local profile = Services.DataService.Get(player)
 	local models = padModels[player] or {}
 	padModels[player] = models
-	for i = 1, 4 do
-		local data = profile and profile.Incubators[tostring(i)]
-		local current = models[i]
-		if current and (not data or current:GetAttribute("Uid") ~= data.Uid) then
+	for key, current in pairs(models) do
+		local data = profile and profile.Incubators[key]
+		if not data or current:GetAttribute("Uid") ~= data.Uid then
 			current:Destroy()
-			models[i] = nil
-			current = nil
+			models[key] = nil
 		end
-		local pad = info and Services.BaseService.GetPad(info, i)
-		if data and not current and pad and pad.Parent then
-			local ok, m = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation })
-			if ok and m then
-				m.Name = "IncubatingEgg"
-				m:SetAttribute("Uid", data.Uid)
-				m:SetAttribute("Biome", data.Biome)
-				m:SetAttribute("Rarity", data.Rarity)
-				m:SetAttribute("Size", data.Size)
-				m:SetAttribute("Mutation", data.Mutation)
-				m:SetAttribute("HatchAt", data.HatchAt)
-				m:SetAttribute("OwnerId", player.UserId)
-				local top = pad:GetAttribute("PadTopY") or 1.5
-				m:PivotTo(pad:GetPivot() * CFrame.new(0, top, 0))
-				local bb = Instance.new("BillboardGui")
-				bb.Name = "Timer"
-				bb.Size = UDim2.fromOffset(160, 40)
-				bb.StudsOffset = Vector3.new(0, (m:GetAttribute("Height") or 4) + 1.5, 0)
-				bb.MaxDistance = 60
-				bb.LightInfluence = 0
-				local t = Instance.new("TextLabel")
-				t.Name = "Text"
-				t.Size = UDim2.fromScale(1, 1)
-				t.BackgroundTransparency = 1
-				t.Font = Enum.Font.FredokaOne
-				t.TextScaled = true
-				t.TextStrokeTransparency = 0
-				t.TextColor3 = R.ById[data.Rarity].Color
-				t.Text = ""
-				t.Parent = bb
-				bb.Parent = m.PrimaryPart
-				CollectionService:AddTag(m, "RR_IncubatorEgg")
-				m.Parent = pad
-				models[i] = m
-			end
-		elseif current and data then
+	end
+	if not info or not profile then
+		return
+	end
+	local folder = info.Runtime:FindFirstChild("Eggs")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Eggs"
+		folder.Parent = info.Runtime
+	end
+	for key, data in pairs(profile.Incubators) do
+		local current = models[key]
+		if current then
 			current:SetAttribute("HatchAt", data.HatchAt)
+			continue
+		end
+		local cf = Services.BaseService.GetSlotCFrame(info, tonumber(key) :: number)
+		local ok, m = pcall(ModelFactory.BuildEgg, data.Biome, data.Rarity, { Size = data.Size, Mutation = data.Mutation })
+		if cf and ok and m then
+			m.Name = "HatchingEgg"
+			m:SetAttribute("Uid", data.Uid)
+			m:SetAttribute("Biome", data.Biome)
+			m:SetAttribute("Rarity", data.Rarity)
+			m:SetAttribute("Size", data.Size)
+			m:SetAttribute("Mutation", data.Mutation)
+			m:SetAttribute("HatchAt", data.HatchAt)
+			m:SetAttribute("Duration", data.Duration)
+			m:SetAttribute("Slot", tonumber(key))
+			m:SetAttribute("OwnerId", player.UserId)
+			if (info.Scale or 1) < 1 then
+				m:ScaleTo(m:GetScale() * math.clamp((info.Scale or 1) * 1.5, 0.6, 1))
+			end
+			m:PivotTo(cf)
+			local bb = Instance.new("BillboardGui")
+			bb.Name = "Timer"
+			bb.Size = UDim2.fromOffset(170, 44)
+			bb.StudsOffset = Vector3.new(0, (m:GetAttribute("Height") or 4) + 1.2, 0)
+			bb.MaxDistance = 60
+			bb.LightInfluence = 0
+			local t = Instance.new("TextLabel")
+			t.Name = "Text"
+			t.Size = UDim2.fromScale(1, 1)
+			t.BackgroundTransparency = 1
+			t.Font = Enum.Font.FredokaOne
+			t.TextScaled = true
+			t.TextStrokeTransparency = 0
+			t.TextColor3 = R.ById[data.Rarity].Color
+			t.Text = ""
+			t.Parent = bb
+			bb.Parent = m.PrimaryPart
+			CollectionService:AddTag(m, "RR_IncubatorEgg")
+			m.Parent = folder
+			models[key] = m
 		end
 	end
 end
+EggService.RefreshPads = EggService.RefreshEggs
 
-local function hatch(player: Player, profile, padKey: string)
-	local data = profile.Incubators[padKey]
-	profile.Incubators[padKey] = nil
-	local pet = Services.PetService.HatchEgg(player, data)
-	-- pull the next egg off the shelf
-	if #profile.EggStorage > 0 then
-		local nextEgg = table.remove(profile.EggStorage, 1)
-		startOnPad(player, profile, tonumber(padKey) :: number, nextEgg)
-		Services.DataService.Changed(player, "EggStorage")
+local function hatchBurst(model: Model?, color: Color3)
+	if not model or not model.PrimaryPart then
+		return
 	end
+	local p = Instance.new("Part")
+	p.Shape = Enum.PartType.Ball
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.Size = Vector3.new(1, 1, 1)
+	p.CFrame = model:GetPivot() + Vector3.new(0, 2, 0)
+	p.Parent = workspace
+	game:GetService("TweenService"):Create(p, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(10, 10, 10), Transparency = 1 }):Play()
+	game:GetService("Debris"):AddItem(p, 0.6)
+end
+
+local function hatch(player: Player, profile, slotKey: string)
+	local data = profile.Incubators[slotKey]
+	profile.Incubators[slotKey] = nil
+	local model = padModels[player] and padModels[player][slotKey]
+	hatchBurst(model, R.ById[data.Rarity].Color)
+	local pet = Services.PetService.HatchEgg(player, data, tonumber(slotKey))
 	Services.DataService.Changed(player, "Incubators")
-	EggService.RefreshPads(player)
+	EggService.RefreshEggs(player)
+	fillFromQueue(player, profile)
 	return pet
 end
 
-local function speedUp(player: Player, pad: any, currency: any)
+local function speedUp(player: Player, slot: any, currency: any)
 	local profile = Services.DataService.Get(player)
-	if not profile or type(pad) ~= "number" then
+	if not profile or type(slot) ~= "number" then
 		return
 	end
-	local data = profile.Incubators[tostring(math.floor(pad))]
+	local data = profile.Incubators[tostring(math.floor(slot))]
 	if not data or not data.HatchAt then
 		return
 	end
@@ -525,7 +610,7 @@ local function speedUp(player: Player, pad: any, currency: any)
 	end
 	data.HatchAt = os.time()
 	Services.DataService.Changed(player, "Incubators")
-	EggService.RefreshPads(player)
+	EggService.RefreshEggs(player)
 end
 
 -- Special spawns (Divine eggs, events): replaces the egg of a random nest in the zone.
@@ -633,8 +718,8 @@ function EggService.Start()
 	end)
 	Services.DataService.OnLoaded(function(player, profile)
 		profile.EggStorage = profile.EggStorage or {}
-		task.wait(0.5)
-		EggService.RefreshPads(player)
+		task.wait(1) -- after PetService has sanitized slots
+		EggService.Revalidate(player)
 	end)
 
 	-- 5 Hz: deliveries, dropped-egg timeouts, carrier sanity
@@ -679,11 +764,16 @@ function EggService.Start()
 			end
 			local now = os.time()
 			for player, profile in pairs(Services.DataService.All()) do
+				local due = {}
 				for key, data in pairs(profile.Incubators) do
 					if data.HatchAt and data.HatchAt <= now then
-						hatch(player, profile, key)
+						table.insert(due, key)
 					end
 				end
+				for _, key in ipairs(due) do
+					hatch(player, profile, key)
+				end
+				fillFromQueue(player, profile)
 				for _, m in pairs(padModels[player] or {}) do
 					local label = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Timer") and (m.PrimaryPart :: any).Timer:FindFirstChild("Text")
 					if label then

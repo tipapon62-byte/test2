@@ -51,6 +51,8 @@ GameConfig.Settings = {
 	WalkSpeedScale = 5.5, -- walk = 16 + scale * log2(1 + effectiveSpeed / WalkSpeedDivisor)
 	WalkSpeedDivisor = 30,
 	TreadmillTick = 0.5,  -- server credits treadmill Speed this often
+	SpeedLaneMult = 1.7,  -- walk-speed multiplier on the hub speed lanes
+	ConveyorSpeed = 16,   -- hub conveyor belt push (studs/s) toward the Rift Run
 
 	-- Eggs
 	NestGrabDistance = 12,

@@ -86,7 +86,7 @@ local function findDef(defs, id: string)
 end
 
 function DailyController.Start()
-	local win = Components.Window("Daily", "Rewards & Quests", Theme.Icons.Daily, { TitleColor = Color3.fromRGB(255, 80, 140) })
+	local win = Components.Window("Daily", "Rewards & Quests", Theme.Icons.Daily, { TitleColor = Theme.Buttons.Quests })
 	local body = win.Body
 	local content = New("Frame", { BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 1, -64), Parent = body })
 	local pages = {}

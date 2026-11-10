@@ -32,9 +32,9 @@ Economy.InventoryCap = 80 -- pets kept in storage (not placed) beyond enclosure 
 -- 🏃 Treadmill: Gain = Speed/sec while standing on it (AFK); Efficiency multiplies Gain while
 -- actively running; BaseSpeed = flat effective Speed bonus that is always applied.
 Economy.TreadmillLevels = {
-	{ Name = "Rusty Rift Treadmill", Gain = 1, Efficiency = 1.5, BaseSpeed = 0, Price = 0, Color = C(130, 130, 140) },
-	{ Name = "Spring Treadmill", Gain = 2, Efficiency = 1.55, BaseSpeed = 10, Price = 150, Color = C(120, 220, 120) },
-	{ Name = "Turbo Treadmill", Gain = 3.5, Efficiency = 1.6, BaseSpeed = 25, Price = 600, Color = C(80, 200, 255) },
+	{ Name = "Rusty Rift Treadmill", Gain = 2, Efficiency = 1.5, BaseSpeed = 0, Price = 0, Color = C(130, 130, 140) },
+	{ Name = "Spring Treadmill", Gain = 3.5, Efficiency = 1.55, BaseSpeed = 10, Price = 150, Color = C(120, 220, 120) },
+	{ Name = "Turbo Treadmill", Gain = 5, Efficiency = 1.6, BaseSpeed = 25, Price = 600, Color = C(80, 200, 255) },
 	{ Name = "Neon Treadmill", Gain = 6, Efficiency = 1.65, BaseSpeed = 50, Price = 2500, Color = C(80, 255, 170) },
 	{ Name = "Plasma Treadmill", Gain = 10, Efficiency = 1.7, BaseSpeed = 100, Price = 9000, Color = C(90, 140, 255) },
 	{ Name = "Ion Treadmill", Gain = 16, Efficiency = 1.75, BaseSpeed = 200, Price = 30000, Color = C(170, 90, 255) },

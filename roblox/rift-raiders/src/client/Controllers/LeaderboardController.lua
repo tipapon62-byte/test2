@@ -47,7 +47,7 @@ local function statOrder(): { string }
 end
 
 function LeaderboardController.Start()
-	local win = Components.Window("Leaderboards", "Leaderboards", Theme.Icons.Leaderboard, { TitleColor = Color3.fromRGB(240, 180, 30) })
+	local win = Components.Window("Leaderboards", "Leaderboards", Theme.Icons.Leaderboard, { TitleColor = Theme.Buttons.Ranks })
 	local body = win.Body
 
 	local ids = statOrder()

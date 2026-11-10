@@ -360,7 +360,7 @@ local function buildShardEggs(page): () -> ()
 end
 
 function ShopController.Start()
-	local win = Components.Window("Shop", "Rift Shop", Theme.Icons.Shop, { TitleColor = Color3.fromRGB(255, 150, 40) })
+	local win = Components.Window("Shop", "Rift Shop", Theme.Icons.Shop, { TitleColor = Theme.Buttons.Shop })
 	local body = win.Body
 	local content = New("Frame", {
 		Name = "Content",
