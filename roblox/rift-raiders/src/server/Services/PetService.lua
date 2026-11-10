@@ -204,7 +204,7 @@ function PetService.AddPet(player: Player, pet, preferredSlot: number?): (any, b
 		-- inventory full: auto-sell so nothing is silently lost
 		local value = GameConfig.PetSellValue(pet)
 		Services.DataService.AddCoins(player, value, true)
-		Services.DataService.Notify(player, ("Pet storage full — %s was sold for %s coins."):format(GameConfig.PetDisplayName(pet), GameConfig.FormatNumber(value)), "warn")
+		Services.DataService.Notify(player, ("Character storage full — %s was sold for %s coins."):format(GameConfig.PetDisplayName(pet), GameConfig.FormatNumber(value)), "warn")
 		return pet, false
 	end
 	pet.Slot = if preferredSlot and preferredSlot <= slotsOf(profile) then preferredSlot else freeSlot(profile)
@@ -322,7 +322,7 @@ function actions.Sell(player, profile, uids)
 		end
 	end
 	if n > 0 then
-		Services.DataService.Notify(player, ("Sold %d pet(s) for %s coins."):format(n, GameConfig.FormatNumber(total)), "good")
+		Services.DataService.Notify(player, ("Sold %d character(s) for %s coins."):format(n, GameConfig.FormatNumber(total)), "good")
 	end
 	changed(player)
 end
@@ -403,7 +403,7 @@ function actions.MutationPotion(player, profile, uids)
 	end
 	local result = Util.WeightedPick(weights, R.MutationOrder)
 	if not result then
-		Services.DataService.Notify(player, "This pet already has the best mutation!", "info")
+		Services.DataService.Notify(player, "This character already has the best mutation!", "info")
 		return
 	end
 	profile.Items.MutationPotion -= 1
@@ -427,11 +427,34 @@ function PetService.Start()
 		local used = {}
 		for uid, pet in pairs(profile.Pets) do
 			if not GameConfig.GetSpecies(pet.Species) then
-				profile.Pets[uid] = nil
+				-- removed animal species from older versions become a character of the same biome + rarity
+				local legacy = GameConfig.LegacySpecies[pet.Species]
+				local pool = legacy and GameConfig.GetSpeciesPool(legacy[1], legacy[2]) or {}
+				if #pool > 0 then
+					pet.Species = pool[math.random(#pool)].Id
+					pet.Name = nil
+					if pet.Slot and (pet.Slot > max or used[pet.Slot]) then
+						pet.Slot = nil
+					elseif pet.Slot then
+						used[pet.Slot] = true
+					end
+				else
+					profile.Pets[uid] = nil
+				end
 			elseif pet.Slot and (pet.Slot > max or used[pet.Slot]) then
 				pet.Slot = nil
 			elseif pet.Slot then
 				used[pet.Slot] = true
+			end
+		end
+		for id in pairs(profile.Index) do
+			if not GameConfig.GetSpecies(id) then
+				profile.Index[id] = nil
+			end
+		end
+		for _, pet in pairs(profile.Pets) do
+			if not profile.Index[pet.Species] then
+				profile.Index[pet.Species] = { First = os.time(), Count = 1 }
 			end
 		end
 		recalcIncome(player)

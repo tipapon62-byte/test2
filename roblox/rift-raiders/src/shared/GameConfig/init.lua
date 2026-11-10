@@ -4,7 +4,8 @@
 
 local Rarities = require(script.Rarities)
 local BiomeData = require(script.Biomes)
-local PetList = require(script.Pets)
+local PetModule = require(script.Pets)
+local PetList = PetModule.List
 local Economy = require(script.Economy)
 local Progression = require(script.Progression)
 
@@ -103,6 +104,7 @@ GameConfig.Progression = Progression
 GameConfig.Biomes = BiomeData.List
 GameConfig.Layout = BiomeData.Layout
 GameConfig.Pets = PetList
+GameConfig.LegacySpecies = PetModule.Legacy
 
 -- ===== Lookups =====
 local biomeById: { [string]: any } = {}
@@ -232,8 +234,13 @@ function GameConfig.EggDisplayName(egg): string
 	if egg.Mutation then
 		table.insert(parts, egg.Mutation)
 	end
-	table.insert(parts, egg.Rarity)
-	table.insert(parts, b and b.EggName or "Egg")
+	local s = egg.Species and speciesById[egg.Species]
+	if s then
+		table.insert(parts, s.Name .. " Egg")
+	else
+		table.insert(parts, egg.Rarity)
+		table.insert(parts, b and b.EggName or "Egg")
+	end
 	return table.concat(parts, " ")
 end
 
