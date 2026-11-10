@@ -40,27 +40,27 @@ local function validate(player: Player, uids: any)
 		return false, "Loading..."
 	end
 	if type(uids) ~= "table" or #uids ~= 3 then
-		return false, "Pick exactly 3 pets."
+		return false, "Pick exactly 3 characters."
 	end
 	local pets, seen = {}, {}
 	for _, uid in ipairs(uids) do
 		if type(uid) ~= "string" or seen[uid] then
-			return false, "Pick 3 different pets."
+			return false, "Pick 3 different characters."
 		end
 		seen[uid] = true
 		local pet = profile.Pets[uid]
 		if not pet then
-			return false, "One of those pets is no longer yours."
+			return false, "One of those characters is no longer yours."
 		end
 		if pet.Locked then
-			return false, "Locked pets can't be fused. Unlock it first."
+			return false, "Locked characters can't be fused. Unlock it first."
 		end
 		table.insert(pets, pet)
 	end
 	local a = pets[1]
 	for i = 2, 3 do
 		if pets[i].Species ~= a.Species or (pets[i].Tier or 1) ~= (a.Tier or 1) then
-			return false, "All 3 pets must be the same species and the same tier."
+			return false, "All 3 must be the same character and the same tier."
 		end
 	end
 	if (a.Tier or 1) >= R.MaxTier then
@@ -94,7 +94,7 @@ local function buildPreview(player: Player, uids)
 			table.insert(warnings, ("%s is %s (only the biggest size is kept)."):format(GameConfig.PetDisplayName(pet), pet.Size))
 		end
 		if pet.Name then
-			table.insert(warnings, ("You named this pet \"%s\" — its name will be lost."):format(pet.Name))
+			table.insert(warnings, ("You named this character \"%s\" — its name will be lost."):format(pet.Name))
 		end
 	end
 	local result = { Species = pets[1].Species, Tier = tier + 1, Size = bestSize, Mutation = bestMut }
@@ -117,17 +117,17 @@ local function buildPreview(player: Player, uids)
 end
 
 local function fuse(player: Player, uids, token)
+	local ok, v = validate(player, uids)
+	if not ok then
+		Services.DataService.Notify(player, v, "bad")
+		return
+	end
 	local t = tokens[player]
 	if type(token) ~= "string" or not t or t.Token ~= token or os.clock() > t.Expires or type(uids) ~= "table" or t.Key ~= setKey(uids) then
 		Services.DataService.Notify(player, "Fusion expired — please review it again.", "warn")
 		return
 	end
 	tokens[player] = nil
-	local ok, v = validate(player, uids)
-	if not ok then
-		Services.DataService.Notify(player, v, "bad")
-		return
-	end
 	if Services.EggService.IsCarrying(player) then
 		Services.DataService.Notify(player, "Deliver your egg before fusing.", "warn")
 		return

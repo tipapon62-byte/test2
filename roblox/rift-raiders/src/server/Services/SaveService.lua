@@ -14,6 +14,7 @@ local GameConfig = require(game:GetService("ReplicatedStorage"):WaitForChild("Sh
 local S = GameConfig.Settings
 
 local SaveService = {}
+local sessionId = if game.JobId ~= "" then game.JobId else game:GetService("HttpService"):GenerateGUID(false)
 
 local store: DataStore? = nil
 local available = false
@@ -56,21 +57,22 @@ end
 --   "ok", data|nil (nil = new player) | "locked" | "error"
 function SaveService.Load(userId: number): (string, any)
 	if not available or not store then
-		return "ok", nil
+		return if RunService:IsStudio() then "ok" else "error", nil
 	end
 	local st = store :: DataStore
 	for attempt = 1, 5 do
 		local lockedByOther = false
 		local ok, record = retry("load " .. userId, if RunService:IsStudio() then 1 else 3, function()
 			return st:UpdateAsync(key(userId), function(old)
+				lockedByOther = false
 				old = old or { Meta = {} }
 				old.Meta = old.Meta or {}
 				local lock = old.Meta.Lock
-				if lock and lock.JobId ~= game.JobId and os.time() - (lock.Time or 0) < S.SessionLockTimeout then
+				if lock and lock.JobId ~= sessionId and os.time() - (lock.Time or 0) < S.SessionLockTimeout then
 					lockedByOther = true
 					return nil -- abort the write, keep the other server's lock
 				end
-				old.Meta.Lock = { JobId = game.JobId, Time = os.time() }
+				old.Meta.Lock = { JobId = sessionId, Time = os.time() }
 				return old
 			end)
 		end)
@@ -101,15 +103,16 @@ function SaveService.Save(userId: number, data: any, release: boolean): boolean
 	local lostLock = false
 	local ok = retry("save " .. userId, 4, function()
 		st:UpdateAsync(key(userId), function(old)
+			lostLock = false
 			old = old or { Meta = {} }
 			old.Meta = old.Meta or {}
 			local lock = old.Meta.Lock
-			if lock and lock.JobId ~= game.JobId then
+			if not lock or lock.JobId ~= sessionId then
 				lostLock = true
 				return nil
 			end
 			old.Data = data
-			old.Meta.Lock = if release then nil else { JobId = game.JobId, Time = os.time() }
+			old.Meta.Lock = if release then nil else { JobId = sessionId, Time = os.time() }
 			old.Meta.SaveCount = (old.Meta.SaveCount or 0) + 1
 			old.Meta.LastSaved = os.time()
 			return old

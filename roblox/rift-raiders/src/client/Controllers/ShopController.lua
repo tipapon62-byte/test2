@@ -13,6 +13,7 @@ local Client = script.Parent.Parent
 local ClientData = require(Client:WaitForChild("Data"):WaitForChild("ClientData"))
 local Components = require(Client:WaitForChild("UI"):WaitForChild("Components"))
 local Theme = require(Client:WaitForChild("UI"):WaitForChild("Theme"))
+local ClientState = require(Client:WaitForChild("Data"):WaitForChild("ClientState"))
 
 local New = Components.New
 local Text = Components.Text
@@ -32,6 +33,7 @@ local function wallet(currency: string?): number
 end
 
 local function purchase(category: string, id: any)
+	ClientState.Call("SoundController", "MarkPurchase")
 	Net.Event("Purchase"):FireServer(category, id)
 end
 
@@ -48,7 +50,7 @@ local UPGRADES = {
 		Track = Economy.BaseLevels,
 		Color = Color3.fromRGB(80, 200, 120),
 		Describe = function(l)
-			return ("%d pet slots\n+%s income"):format(l.Slots, pct(l.IncomeBonus))
+			return ("%d character slots\n+%s income"):format(l.Slots, pct(l.IncomeBonus))
 		end,
 	},
 	{
@@ -177,7 +179,7 @@ local function buildKeys(page): () -> ()
 			local b = r.Biome
 			local owned = p.Biomes and p.Biomes[b.Id]
 			local speedColor = if eff >= b.RecommendedSpeed then Theme.Colors.Good elseif eff >= b.RequiredSpeed then Theme.Colors.Warn else Theme.Colors.Bad
-			r.Info.Text = ("<font color=\"#%s\">⚡ need %s · safe %s</font>  ·  pets from 🪙%s/s"):format(
+			r.Info.Text = ("<font color=\"#%s\">⚡ need %s · safe %s</font>  ·  characters earn 🪙%s/s"):format(
 				speedColor:ToHex(),
 				Fmt(b.RequiredSpeed),
 				Fmt(b.RecommendedSpeed),
@@ -264,9 +266,9 @@ local function buildItems(page): () -> ()
 		local item = Economy.Items[id]
 		local card = Components.Card({ Color = Theme.Colors.Panel, Size = UDim2.new(1 / 3, -10, 1, -4), LayoutOrder = i, Parent = page })
 		Text({ Text = ITEM_ICON[id] or "📦", TextSize = 46, Outline = false, Size = UDim2.new(1, 0, 0, 56), Position = UDim2.fromOffset(0, 6), Parent = card })
-		Text({ Text = item.Name, TextSize = 22, Size = UDim2.new(1, -10, 0, 28), Position = UDim2.fromOffset(5, 62), Parent = card })
+		Text({ Text = Theme.Reword(item.Name), TextSize = 22, Size = UDim2.new(1, -10, 0, 28), Position = UDim2.fromOffset(5, 62), Parent = card })
 		Text({
-			Text = item.Description,
+			Text = Theme.Reword(item.Description),
 			TextSize = 15,
 			Font = Theme.FontBody,
 			TextColor3 = Theme.Colors.TextDim,
@@ -409,6 +411,7 @@ function ShopController.Start()
 		refresh()
 	end)
 	tabs.Select("Upgrades")
+	ShopController.Tabs = tabs
 	win.DefaultSelection = tabs.Buttons.Upgrades
 	win.OnOpen = refresh
 
@@ -419,8 +422,11 @@ function ShopController.Start()
 end
 
 -- Lets other UI jump straight to a shop tab (e.g. "buy traps" hints).
-function ShopController.Open()
+function ShopController.Open(tab: string?)
 	Components.Open("Shop")
+	if tab and ShopController.Tabs and ShopController.Tabs.Buttons[tab] then
+		ShopController.Tabs.Select(tab)
+	end
 end
 
 return ShopController

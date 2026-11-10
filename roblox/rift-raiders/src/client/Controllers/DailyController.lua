@@ -11,6 +11,7 @@ local Client = script.Parent.Parent
 local ClientData = require(Client:WaitForChild("Data"):WaitForChild("ClientData"))
 local Components = require(Client:WaitForChild("UI"):WaitForChild("Components"))
 local Theme = require(Client:WaitForChild("UI"):WaitForChild("Theme"))
+local ClientState = require(Client:WaitForChild("Data"):WaitForChild("ClientState"))
 
 local New = Components.New
 local Text = Components.Text
@@ -30,7 +31,7 @@ local function rewardText(r): string
 	end
 	if r.Item then
 		local item = Economy.Items[r.Item]
-		table.insert(parts, ("%dx %s"):format(r.Amount or 1, item and item.Name or r.Item))
+		table.insert(parts, ("%dx %s"):format(r.Amount or 1, Theme.Reword(item and item.Name or r.Item)))
 	end
 	if r.Egg then
 		for _, e in ipairs(Economy.ShardEggs) do
@@ -161,7 +162,7 @@ function DailyController.Start()
 			Parent = parent,
 		})
 		Text({
-			Text = def.Text,
+			Text = Theme.Reword(def.Text),
 			TextSize = 19,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Size = UDim2.new(1, -230, 0, 28),
@@ -250,7 +251,7 @@ function DailyController.Start()
 			})
 			Text({ Text = if done then "🏅" else "🎯", TextSize = 34, Outline = false, Size = UDim2.fromOffset(56, 72), Parent = row })
 			Text({
-				Text = a.Text,
+				Text = Theme.Reword(a.Text),
 				TextSize = 18,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Size = UDim2.new(1, -200, 0, 28),
@@ -353,8 +354,27 @@ function DailyController.Start()
 		refresh()
 	end)
 	tabs.Select("Rewards")
+	DailyController.Tabs = tabs
 	win.DefaultSelection = tabs.Buttons.Rewards
 	win.OnOpen = refresh
+
+	-- Daily reward pops up by itself on join when it can be claimed (after the tutorial, and never
+	-- on top of another window).
+	task.delay(4, function()
+		local deadline = os.clock() + 600
+		while os.clock() < deadline do
+			local _, can = DailyController.DailyState(ClientData.Get())
+			if not can then
+				return
+			end
+			local tutorialBusy = ClientState.Call("TutorialController", "IsActive") == true
+			if not tutorialBusy and not Components.CurrentWindow and not ClientState.Carrying() then
+				DailyController.OpenDaily()
+				return
+			end
+			task.wait(2)
+		end
+	end)
 
 	-- Stats tick constantly (TimePlayed, CoinsEarned): only rebuild the page they affect, throttled.
 	local lastAch = 0
@@ -383,6 +403,13 @@ function DailyController.Start()
 			end
 		end
 	end)
+end
+
+function DailyController.OpenDaily()
+	Components.Open("Daily")
+	if DailyController.Tabs then
+		DailyController.Tabs.Select("Rewards")
+	end
 end
 
 return DailyController
