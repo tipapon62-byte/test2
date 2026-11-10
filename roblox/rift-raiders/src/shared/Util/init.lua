@@ -3,6 +3,10 @@ local HttpService = game:GetService("HttpService")
 
 local Util = {}
 
+function Util.IsFinite(value: any): boolean
+	return type(value) == "number" and value == value and math.abs(value) < math.huge
+end
+
 function Util.Uid(prefix: string?): string
 	return (prefix or "") .. HttpService:GenerateGUID(false):gsub("-", ""):sub(1, 16)
 end

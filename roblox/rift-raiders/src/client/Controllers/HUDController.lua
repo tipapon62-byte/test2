@@ -37,7 +37,7 @@ local HUDController = {}
 
 local MENU = {
 	{ Window = "Shop", Icon = Theme.Icons.Shop, Label = "Shop", Color = Theme.Buttons.Shop },
-	{ Window = "Pets", Icon = Theme.Icons.Pets, Label = "Pets", Color = Theme.Buttons.Pets },
+	{ Window = "Pets", Icon = Theme.Icons.Pets, Label = "Characters", Short = "Crew", TextSize = 25, Color = Theme.Buttons.Pets },
 	{ Window = "Index", Icon = Theme.Icons.Index, Label = "Index", Color = Theme.Buttons.Index },
 	{ Window = "Fuse", Icon = Theme.Icons.Fuse, Label = "Fuse", Color = Theme.Buttons.Fuse },
 	{ Window = "Daily", Icon = Theme.Icons.Daily, Label = "Quests", Color = Theme.Buttons.Quests },
@@ -272,8 +272,8 @@ function HUDController.Start()
 		local b = Components.Button({
 			Name = "Menu_" .. m.Window,
 			Icon = m.Icon,
-			Text = m.Label,
-			TextSize = if isTouch then 22 else 30,
+			Text = if isTouch then (m.Short or m.Label) else m.Label,
+			TextSize = if isTouch then 22 else (m.TextSize or 30),
 			IconScale = if isTouch then 0.6 else 0.66,
 			Color = m.Color,
 			Size = if isTouch then UDim2.fromOffset(114, 58) else UDim2.fromOffset(204, 60),
@@ -430,7 +430,7 @@ function HUDController.Start()
 				row.Bar.Set(0, "waiting...")
 				row.Coin.Visible, row.Shard.Visible = false, false
 			elseif remaining <= 0 then
-				row.Bar.Set(1, "🐣 Hatching!")
+				row.Bar.Set(1, "🥚 Hatching!")
 				row.Coin.Visible, row.Shard.Visible = false, false
 			else
 				local duration = egg.Duration or GameConfig.HatchDuration(egg.Rarity, egg.Size, profile.IncubatorLevel or 1)

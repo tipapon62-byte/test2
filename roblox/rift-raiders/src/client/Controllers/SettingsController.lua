@@ -21,7 +21,7 @@ local player = Players.LocalPlayer
 
 local SettingsController = {}
 
-local DEFAULTS = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true }
+local DEFAULTS = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true, TutorialDone = false }
 local SAVE_DELAY = 1.5
 
 local settings: { [string]: any } = table.clone(DEFAULTS)
@@ -111,6 +111,13 @@ local function changed(key: string, value: any)
 			Net.Event("SaveSettings"):FireServer(table.clone(settings))
 		end
 	end)
+end
+
+-- Sets and saves one setting from other controllers (e.g. TutorialDone).
+function SettingsController.Set(key: string, value: any)
+	if settings[key] ~= value then
+		changed(key, value)
+	end
 end
 
 local function slider(parent, order: number, label: string, key: string): () -> ()
@@ -240,8 +247,9 @@ end
 function SettingsController.Start()
 	local win = Components.Window("Settings", "Settings", Theme.Icons.Settings, { TitleColor = Theme.Buttons.Settings })
 	local list = Components.ScrollList(win.Body, 8)
+	-- (the Music setting is kept and applied to the "Music" SoundGroup, but the game ships no music
+	-- tracks yet, so only the Sound FX slider is shown)
 	local renders = {
-		slider(list, 1, "🎵 Music", "Music"),
 		slider(list, 2, "🔊 Sound FX", "Sfx"),
 		toggle(list, 3, "🪶 Low graphics", "Fewer particles and effects for older devices", "LowGraphics"),
 		toggle(list, 4, "✨ Show trails", "Show other raiders' trails", "ShowTrails"),

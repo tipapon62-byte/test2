@@ -19,6 +19,10 @@ local E = GameConfig.Economy
 local DataService = {}
 
 local profiles: { [Player]: any } = {}
+local ready: { [Player]: boolean } = {}
+local saving: { [Player]: boolean } = {}
+local closing: { [Player]: boolean } = {}
+local released: { [Player]: boolean } = {}
 local dirty: { [Player]: { [string]: boolean } } = {}
 local derivedProviders: { (Player, any, any) -> () } = {}
 local loadedCallbacks: { (Player, any) -> () } = {}
@@ -52,7 +56,7 @@ local function template()
 		Quests = { Daily = { Period = -1, List = {} }, Weekly = { Period = -1, List = {} } },
 		Achievements = {},
 		Codes = {},
-		Settings = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true },
+		Settings = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true, TutorialDone = false },
 		FirstJoin = now,
 		LastOnline = now,
 	}
@@ -61,6 +65,17 @@ end
 -- Upgrades older saves in place. Add a branch per DataVersion bump.
 local function migrate(data)
 	Util.Reconcile(data, template())
+	local incubators = {}
+	for key, egg in pairs(data.Incubators) do
+		local slot = tonumber(key)
+		local canonical = slot and tostring(slot)
+		if canonical and not incubators[canonical] then
+			incubators[canonical] = egg
+		else
+			table.insert(data.EggStorage, egg)
+		end
+	end
+	data.Incubators = incubators
 	-- v1 is the first schema; future: if data.Version < 2 then ... end
 	data.Version = GameConfig.DataVersion
 	return data
@@ -119,10 +134,10 @@ end
 
 function DataService.WaitFor(player: Player, timeout: number?)
 	local t = 0
-	while not profiles[player] and player.Parent and t < (timeout or 30) do
+	while not ready[player] and player.Parent and t < (timeout or 30) do
 		t += task.wait(0.1)
 	end
-	return profiles[player]
+	return if ready[player] then profiles[player] else nil
 end
 
 function DataService.All(): { [Player]: any }
@@ -168,7 +183,7 @@ end
 -- Adds coins. countAsEarned = true for income/rewards (feeds stats and quests), false for refunds.
 function DataService.AddCoins(player: Player, amount: number, countAsEarned: boolean?)
 	local profile = profiles[player]
-	if not profile or amount ~= amount or amount == math.huge then
+	if not profile or not Util.IsFinite(amount) then
 		return
 	end
 	profile.Coins = math.max(0, profile.Coins + amount)
@@ -183,7 +198,7 @@ end
 
 function DataService.AddShards(player: Player, amount: number)
 	local profile = profiles[player]
-	if not profile then
+	if not profile or not Util.IsFinite(amount) then
 		return
 	end
 	profile.Shards = math.max(0, profile.Shards + math.floor(amount))
@@ -193,7 +208,7 @@ end
 -- Atomically checks and spends a currency. Returns true when paid.
 function DataService.Spend(player: Player, currency: string, amount: number): boolean
 	local profile = profiles[player]
-	if not profile or amount < 0 or amount ~= amount then
+	if not profile or not Util.IsFinite(amount) or amount < 0 or (currency ~= "Coins" and currency ~= "Shards") then
 		return false
 	end
 	local field = if currency == "Shards" then "Shards" else "Coins"
@@ -219,6 +234,18 @@ end
 
 -- Saves now. release = clear the session lock (player leaving / shutdown).
 function DataService.Save(player: Player, release: boolean?): boolean
+	if release then
+		closing[player] = true
+	end
+	while saving[player] do
+		task.wait(0.05)
+	end
+	if released[player] then
+		return true
+	end
+	if closing[player] and not release then
+		return false
+	end
 	local profile = profiles[player]
 	if not profile or profile._noSave then
 		return false
@@ -227,7 +254,16 @@ function DataService.Save(player: Player, release: boolean?): boolean
 	local data = Util.DeepCopy(profile)
 	data.Derived = nil
 	data._noSave = nil
-	return SaveService.Save(player.UserId, data, release == true)
+	saving[player] = true
+	local ok, result = pcall(SaveService.Save, player.UserId, data, release == true)
+	saving[player] = nil
+	if release then
+		released[player] = true
+	end
+	if not ok then
+		warn("[DataService] save failed:", result)
+	end
+	return ok and result == true
 end
 
 -- ===== Lifecycle =====
@@ -265,19 +301,28 @@ local function onPlayerAdded(player: Player)
 		profile._noSave = true
 	end
 	profiles[player] = profile
+	for _, fn in ipairs(loadedCallbacks) do
+		local ok, err = pcall(fn, player, profile)
+		if not ok then
+			warn("[DataService] loaded callback failed:", err)
+		end
+	end
 	computeDerived(player, profile)
 	syncAttributes(player, profile)
-	for _, fn in ipairs(loadedCallbacks) do
-		task.spawn(fn, player, profile)
+	ready[player] = true
+	for key in pairs(profile) do
+		if key ~= "_noSave" then
+			DataService.Changed(player, key)
+		end
 	end
-	DataService.Changed(player, "Coins")
 end
 
 local function onPlayerRemoving(player: Player)
 	local profile = profiles[player]
-	if not profile then
+	if not profile or closing[player] then
 		return
 	end
+	closing[player] = true
 	for _, fn in ipairs(removingCallbacks) do
 		local ok, err = pcall(fn, player, profile)
 		if not ok then
@@ -286,6 +331,7 @@ local function onPlayerRemoving(player: Player)
 	end
 	DataService.Save(player, true)
 	profiles[player] = nil
+	ready[player] = nil
 	dirty[player] = nil
 end
 
@@ -315,9 +361,9 @@ function DataService.Start()
 		for k, v in pairs(cur) do
 			local incoming = settings[k]
 			if type(incoming) == type(v) then
-				if type(v) == "number" then
+				if type(v) == "number" and Util.IsFinite(incoming) then
 					cur[k] = math.clamp(incoming, 0, 1)
-				else
+				elseif type(v) ~= "number" then
 					cur[k] = incoming
 				end
 			end
@@ -369,10 +415,10 @@ function DataService.Start()
 		for player in pairs(profiles) do
 			pending += 1
 			task.spawn(function()
-				for _, fn in ipairs(removingCallbacks) do
-					pcall(fn, player, profiles[player])
+				onPlayerRemoving(player)
+				while profiles[player] do
+					task.wait(0.05)
 				end
-				DataService.Save(player, true)
 				pending -= 1
 			end)
 		end
