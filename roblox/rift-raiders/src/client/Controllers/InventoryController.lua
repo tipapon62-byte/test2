@@ -68,7 +68,7 @@ local function signature(pet): string
 end
 
 function InventoryController.Start()
-	local win = Components.Window("Pets", "My Pets", Theme.Icons.Pets, { TitleColor = Color3.fromRGB(70, 190, 110) })
+	local win = Components.Window("Pets", "My Pets", Theme.Icons.Pets, { TitleColor = Theme.Buttons.Pets })
 	local body = win.Body
 
 	local left = New("Frame", { Name = "Left", BackgroundTransparency = 1, Size = UDim2.new(1, -312, 1, 0), Parent = body })
@@ -308,12 +308,16 @@ function InventoryController.Start()
 			Name = pet.Uid,
 			Text = "",
 			AutoButtonColor = false,
-			BackgroundColor3 = Theme.Darken(color, 0.55),
+			BackgroundColor3 = color,
 		})
 		Components.Selectable(card)
 		Components.Corner(card, 14)
-		Components.Gradient(card, Theme.Darken(color, 0.35), Theme.Darken(color, 0.7))
-		local stroke = Components.Stroke(card, color, 3)
+		Components.Gradient(card, Theme.Lighten(color, 0.15), Theme.Darken(color, 0.4))
+		local stroke = Components.Stroke(card, Theme.Colors.Stroke, 4)
+		if Theme.RarityIndex(rarity) >= 4 then
+			Components.Shine(card)
+		end
+		Components.Squash(card)
 		Components.PetViewport(pet, { Size = UDim2.new(1, -10, 0, 86), Position = UDim2.fromOffset(5, 4), Parent = card })
 		Text({
 			Text = GameConfig.PetDisplayName(pet),
@@ -349,7 +353,7 @@ function InventoryController.Start()
 			refreshDetail()
 			Components.Pop(card, 0.9, Theme.Tween.Fast)
 		end)
-		return { Frame = card, Key = signature(pet), Stroke = stroke, Color = color }
+		return { Frame = card, Key = signature(pet), Stroke = stroke, Color = Theme.Colors.Stroke }
 	end
 
 	rebuild = function()

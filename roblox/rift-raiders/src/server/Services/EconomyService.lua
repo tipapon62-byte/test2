@@ -188,6 +188,7 @@ function EconomyService.Rebirth(player: Player)
 	profile.Biomes = { RiftLab = true }
 	Services.DataService.AddShards(player, E.Rebirth.ShardsPerRebirth * profile.Rebirths)
 	Services.PetService.StoreOverflow(player)
+	Services.EggService.Revalidate(player)
 	Services.DataService.Changed(player, "Rebirths", "Coins", "SpeedStat", "TreadmillLevel", "BaseLevel", "IncubatorLevel", "Biomes", "Pets")
 	Services.BaseService.ApplyLevels(player)
 	Services.SpeedService.Apply(player)

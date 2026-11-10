@@ -46,7 +46,7 @@ function IndexController.Totals(index): (number, number)
 end
 
 function IndexController.Start()
-	local win = Components.Window("Index", "Rift Index", Theme.Icons.Index, { TitleColor = Color3.fromRGB(60, 140, 255) })
+	local win = Components.Window("Index", "Rift Index", Theme.Icons.Index, { TitleColor = Theme.Buttons.Index })
 	local body = win.Body
 
 	local totalBar = Components.ProgressBar({ Size = UDim2.new(1, 0, 0, 30), TextSize = 18, Color = Theme.Colors.Accent, Parent = body })
@@ -109,12 +109,11 @@ function IndexController.Start()
 			local entry = index[s.Id]
 			local rarity = Rarities.ById[s.Rarity]
 			local color = rarity.Color
-			local card = Components.Card({ Color = if entry then Theme.Darken(color, 0.5) else Color3.fromRGB(28, 24, 52), LayoutOrder = i, Parent = grid })
+			local card = Components.Card({ Color = if entry then Theme.Darken(color, 0.1) else Color3.fromRGB(40, 52, 96), LayoutOrder = i, Parent = grid })
 			card.Name = s.Id
 			Components.Selectable(card)
-			local stroke = card:FindFirstChildOfClass("UIStroke")
-			if stroke then
-				stroke.Color = if entry then color else Theme.Colors.Stroke
+			if entry and rarity.Index >= 4 then
+				Components.Shine(card)
 			end
 			Components.PetViewport({ Species = s.Id, Size = "Normal", Tier = 1 }, {
 				Silhouette = entry == nil,
