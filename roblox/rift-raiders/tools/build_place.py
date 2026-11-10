@@ -156,6 +156,61 @@ def clone(item, prefix="RRC"):
     return reref(copy.deepcopy(item), prefix)
 
 
+def _scale_v3(el, f):
+    for k in ("X", "Y", "Z"):
+        n = el.find(k)
+        if n is not None:
+            n.text = repr(float(n.text) * f)
+
+
+def scale_about(item, anchor, f):
+    """Uniformly scales a subtree about a world point (positions, sizes, attachments, file meshes,
+    light ranges). Rotations are kept."""
+    ax, ay, az = anchor
+    for it in item.iter("Item"):
+        p = props(it)
+        if p is None:
+            continue
+        cls = it.get("class")
+        mesh_type = None
+        for prop in p:
+            if prop.get("name") == "MeshType":
+                mesh_type = prop.text
+        for prop in p:
+            n = prop.get("name")
+            if prop.tag == "CoordinateFrame" and n == "CFrame":
+                if cls in BASEPARTS:
+                    for k, a in (("X", ax), ("Y", ay), ("Z", az)):
+                        e = prop.find(k)
+                        e.text = repr(a + (float(e.text) - a) * f)
+                elif cls == "Attachment":
+                    _scale_v3(prop, f)
+            elif prop.tag == "OptionalCoordinateFrame" and n == "WorldPivotData":
+                cf = prop.find("CFrame")
+                if cf is not None and cf.find("X") is not None:
+                    for k, a in (("X", ax), ("Y", ay), ("Z", az)):
+                        e = cf.find(k)
+                        e.text = repr(a + (float(e.text) - a) * f)
+            elif prop.tag == "Vector3" and n == "size" and cls in BASEPARTS:
+                _scale_v3(prop, f)
+            elif prop.tag == "Vector3" and n == "Scale" and cls == "SpecialMesh" and mesh_type == "5":
+                _scale_v3(prop, f)  # FileMesh scale is absolute; primitive meshes follow the part size
+            elif prop.tag == "float" and n == "Range" and cls in ("PointLight", "SpotLight", "SurfaceLight"):
+                prop.text = repr(float(prop.text) * f)
+
+
+def part_pos(item, part_name):
+    for it in item.iter("Item"):
+        if name(it) == part_name and it.get("class") in BASEPARTS:
+            for prop in props(it):
+                if prop.get("name") == "CFrame":
+                    return tuple(float(prop.find(k).text) for k in ("X", "Y", "Z"))
+    return None
+
+
+BASE_SCALE = 0.5  # personal bases are 4x smaller in area than in the original map
+
+
 def rojo_build(out):
     rojo = os.environ.get("ROJO", "rojo")
     subprocess.run([rojo, "build", os.path.join(ROOT, "default.project.json"), "-o", out], check=True)
@@ -179,10 +234,19 @@ def main():
     if scs is not None:
         remove_children(scs)
     rs = path(root, "ReplicatedStorage")
-    for n in ("Config", "Remotes", "CharacterModels", "GuardianModels", "Shared"):
+    # CharacterModels stay: the classic characters are pets again (restyled by ModelFactory)
+    for n in ("Config", "Remotes", "GuardianModels", "Shared"):
         c = child(rs, n)
         if c is not None:
             rs.remove(c)
+
+    # ---- 1b. shrink the personal bases about their entrance (the road side stays in place)
+    bases = path(root, "Workspace", "Bases")
+    if bases is not None:
+        for b in items(bases):
+            mat = part_pos(b, "EntranceMat") or part_pos(b, "Floor")
+            if mat:
+                scale_about(b, (mat[0], 0.0, mat[2]), BASE_SCALE)
 
     # ---- 2. re-theme the Rift Run
     zones = path(root, "Workspace", "RiftRun", "Zones")

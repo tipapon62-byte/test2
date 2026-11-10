@@ -99,6 +99,8 @@ function SpeedService.Start()
 		character:WaitForChild("Humanoid", 10)
 		character:WaitForChild("HumanoidRootPart", 10)
 		modifiers[player] = {}
+		player:SetAttribute("SpeedLane", false)
+		player:SetAttribute("Training", 0)
 		SpeedService.Apply(player)
 		SpeedService.ApplyTrail(player)
 	end
@@ -173,9 +175,56 @@ function SpeedService.Start()
 					Services.QuestService.Track(player, "TreadmillSeconds", whole)
 				end
 				Services.DataService.Changed(player, "SpeedStat", "Stats")
+				player:SetAttribute("Training", math.floor(gain * 10) / 10)
 				if GameConfig.WalkSpeedFor(SpeedService.GetEffective(player)) ~= before then
 					SpeedService.Apply(player)
 				end
+			elseif player:GetAttribute("Training") ~= 0 then
+				player:SetAttribute("Training", 0)
+			end
+		end
+	end)
+
+	-- Hub speed lanes: standing on a SpeedLaneZone gives a walk-speed boost (server-applied, so
+	-- the anti-cheat allows it). The hub conveyor belt carries players toward the Rift Run.
+	local laneZones = {}
+	local hub = workspace:FindFirstChild("Hub")
+	local lanes = hub and hub:FindFirstChild("SpeedLanes")
+	if lanes then
+		for _, d in ipairs(lanes:GetDescendants()) do
+			if d:IsA("BasePart") and d.Name == "SpeedLaneZone" then
+				table.insert(laneZones, d)
+			end
+		end
+	end
+	local conveyor = workspace:FindFirstChild("Conveyor")
+	local belt = conveyor and conveyor:FindFirstChild("Belt") :: BasePart?
+	if belt then
+		belt.AssemblyLinearVelocity = Vector3.new(S.ConveyorSpeed, 0, 0)
+	end
+	local function onLane(pos: Vector3): boolean
+		for _, z in ipairs(laneZones) do
+			local r = z.CFrame:PointToObjectSpace(pos)
+			local s = z.Size / 2
+			if math.abs(r.X) <= s.X and math.abs(r.Z) <= s.Z and r.Y > -s.Y - 1 and r.Y < s.Y + 7 then
+				return true
+			end
+		end
+		return false
+	end
+	local laneAcc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		laneAcc += dt
+		if laneAcc < 0.2 or #laneZones == 0 then
+			return
+		end
+		laneAcc = 0
+		for _, player in ipairs(Players:GetPlayers()) do
+			local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local on = hrp ~= nil and onLane(hrp.Position)
+			if (player:GetAttribute("SpeedLane") == true) ~= on then
+				player:SetAttribute("SpeedLane", on)
+				SpeedService.SetModifier(player, "Lane", if on then S.SpeedLaneMult else nil)
 			end
 		end
 	end)

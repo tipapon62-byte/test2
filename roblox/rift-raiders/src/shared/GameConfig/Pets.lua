@@ -19,6 +19,7 @@ export type Species = {
 	Colors: { Color3 },
 	Kg: { number },
 	EventOnly: boolean?,
+	Template: string?,
 }
 
 local C = Color3.fromRGB
@@ -79,6 +80,40 @@ local Pets: { Species } = {
 
 	-- Event-only (Rift Storm Divine egg)
 	{ Id = "RiftSovereign", Name = "Rift Sovereign", Biome = "AstralRuins", Rarity = "Divine", Archetype = "Dino", Features = { "Crown", "Halo", "Stars", "Wings" }, Colors = { C(0, 230, 170), C(230, 255, 250), C(170, 90, 255) }, Kg = { 200, 400 }, EventOnly = true },
+
+	-- ===== Classic characters from the original "Steal the Multiverse" place =====
+	-- Template = model name in ReplicatedStorage.CharacterModels; ModelFactory restyles it
+	-- (brick/stud look, eyes, rarity flair). Archetype/Colors are the fallback if the template is missing.
+	-- Old universes map to biomes: Mad Science -> Rift Lab, Yellow Town -> Mosswood, Bikini Deep -> Glimmer Lake,
+	-- Meme Universe -> Sunscorch, Anime Dimension -> Vinewild, Multiverse secrets -> Astral Ruins (Divine).
+	{ Id = "PanicGrandson", Name = "Panicking Grandson", Biome = "RiftLab", Rarity = "Common", Template = "PanicGrandson", Archetype = "Golem", Features = {}, Colors = { C(255, 220, 120), C(255, 240, 220), C(90, 160, 255) }, Kg = { 30, 45 } },
+	{ Id = "ButterRobot", Name = "Butter-Passing Robot", Biome = "RiftLab", Rarity = "Rare", Template = "ButterRobot", Archetype = "Bug", Features = { "Antenna" }, Colors = { C(190, 195, 205), C(240, 240, 245), C(90, 255, 200) }, Kg = { 3, 6 } },
+	{ Id = "HelperBlue", Name = "Blue Helper Dude", Biome = "RiftLab", Rarity = "Epic", Template = "HelperBlue", Archetype = "Golem", Features = {}, Colors = { C(90, 170, 255), C(200, 230, 255), C(255, 255, 255) }, Kg = { 50, 80 } },
+	{ Id = "PickleScientist", Name = "Pickle Scientist", Biome = "RiftLab", Rarity = "Legendary", Template = "PickleScientist", Archetype = "Blob", Features = { "Goggles" }, Colors = { C(120, 200, 80), C(200, 240, 160), C(60, 120, 40) }, Kg = { 0.5, 1 } },
+	{ Id = "MadGrandpa", Name = "Mad Scientist Grandpa", Biome = "RiftLab", Rarity = "Mythic", Template = "MadGrandpa", Archetype = "Golem", Features = { "Goggles" }, Colors = { C(200, 210, 230), C(255, 255, 255), C(120, 220, 255) }, Kg = { 60, 75 } },
+	{ Id = "SlingshotKid", Name = "Slingshot Troublemaker", Biome = "Mosswood", Rarity = "Common", Template = "SlingshotKid", Archetype = "Golem", Features = { "Spikes" }, Colors = { C(255, 220, 60), C(255, 140, 60), C(60, 120, 255) }, Kg = { 25, 35 } },
+	{ Id = "DonutDad", Name = "Donut Dad", Biome = "Mosswood", Rarity = "Rare", Template = "DonutDad", Archetype = "Golem", Features = {}, Colors = { C(255, 220, 60), C(255, 255, 255), C(255, 130, 200) }, Kg = { 110, 140 } },
+	{ Id = "TowerHairMom", Name = "Blue Tower Hair Mom", Biome = "Mosswood", Rarity = "Epic", Template = "TowerHairMom", Archetype = "Golem", Features = {}, Colors = { C(255, 220, 60), C(60, 110, 255), C(120, 220, 120) }, Kg = { 55, 70 } },
+	{ Id = "GreedyBoss", Name = "Greedy Old Boss", Biome = "Mosswood", Rarity = "Legendary", Template = "GreedyBoss", Archetype = "Golem", Features = {}, Colors = { C(255, 220, 60), C(80, 70, 90), C(255, 200, 50) }, Kg = { 45, 60 } },
+	{ Id = "ThreeEyedFish", Name = "Three-Eyed Fish King", Biome = "Mosswood", Rarity = "Mythic", Template = "ThreeEyedFish", Archetype = "Serpent", Features = { "Fins", "Crown" }, Colors = { C(255, 150, 40), C(255, 230, 160), C(120, 255, 120) }, Kg = { 8, 15 } },
+	{ Id = "PinkStar", Name = "Pink Starfish", Biome = "GlimmerLake", Rarity = "Common", Template = "PinkStar", Archetype = "Blob", Features = { "Stars" }, Colors = { C(255, 150, 190), C(255, 210, 225), C(120, 220, 120) }, Kg = { 4, 8 } },
+	{ Id = "GrumpySquid", Name = "Grumpy Squid", Biome = "GlimmerLake", Rarity = "Rare", Template = "GrumpySquid", Archetype = "Floaty", Features = {}, Colors = { C(150, 210, 200), C(220, 245, 240), C(120, 90, 60) }, Kg = { 15, 25 } },
+	{ Id = "SquareSponge", Name = "Square Sponge", Biome = "GlimmerLake", Rarity = "Epic", Template = "SquareSponge", Archetype = "Golem", Features = {}, Colors = { C(255, 235, 80), C(255, 255, 200), C(160, 110, 60) }, Kg = { 1, 2 } },
+	{ Id = "MoneyCrab", Name = "Millionaire Crab", Biome = "GlimmerLake", Rarity = "Legendary", Template = "MoneyCrab", Archetype = "Bug", Features = { "Shell" }, Colors = { C(230, 60, 50), C(255, 200, 180), C(255, 210, 60) }, Kg = { 20, 35 } },
+	{ Id = "GhostCaptain", Name = "Flying Ghost Captain", Biome = "GlimmerLake", Rarity = "Mythic", Template = "GhostCaptain", Archetype = "Floaty", Features = { "Crown" }, Colors = { C(140, 255, 200), C(220, 255, 240), C(60, 60, 80) }, Kg = { 0.1, 0.5 } },
+	{ Id = "ToiletHead", Name = "Toilet Head", Biome = "Sunscorch", Rarity = "Common", Template = "ToiletHead", Archetype = "Golem", Features = {}, Colors = { C(245, 245, 250), C(255, 255, 255), C(90, 160, 255) }, Kg = { 20, 30 } },
+	{ Id = "SneakerShark", Name = "Shark In Sneakers", Biome = "Sunscorch", Rarity = "Rare", Template = "SneakerShark", Archetype = "Serpent", Features = { "Fins" }, Colors = { C(90, 140, 200), C(230, 240, 250), C(255, 255, 255) }, Kg = { 80, 140 } },
+	{ Id = "CappuccinoBallerina", Name = "Cappuccino Ballerina", Biome = "Sunscorch", Rarity = "Epic", Template = "CappuccinoBallerina", Archetype = "Golem", Features = {}, Colors = { C(190, 140, 100), C(255, 240, 225), C(255, 170, 200) }, Kg = { 2, 4 } },
+	{ Id = "WoodenDrummer", Name = "Wooden Drummer", Biome = "Sunscorch", Rarity = "Legendary", Template = "WoodenDrummer", Archetype = "Golem", Features = {}, Colors = { C(180, 130, 80), C(230, 190, 140), C(200, 60, 60) }, Kg = { 15, 25 } },
+	{ Id = "CrocBomber", Name = "Crocodile Bomber Jet", Biome = "Sunscorch", Rarity = "Mythic", Template = "CrocBomber", Archetype = "Dino", Features = { "Wings" }, Colors = { C(80, 150, 70), C(200, 230, 160), C(150, 150, 160) }, Kg = { 300, 500 } },
+	{ Id = "HeadbandRookie", Name = "Headband Rookie", Biome = "Vinewild", Rarity = "Common", Template = "HeadbandRookie", Archetype = "Golem", Features = {}, Colors = { C(255, 150, 40), C(255, 220, 180), C(40, 60, 120) }, Kg = { 40, 50 } },
+	{ Id = "RamenNinja", Name = "Ramen Ninja", Biome = "Vinewild", Rarity = "Rare", Template = "RamenNinja", Archetype = "Golem", Features = {}, Colors = { C(60, 60, 80), C(255, 220, 180), C(255, 200, 60) }, Kg = { 45, 55 } },
+	{ Id = "BigSwordBoy", Name = "Guy With A Huge Sword", Biome = "Vinewild", Rarity = "Epic", Template = "BigSwordBoy", Archetype = "Golem", Features = {}, Colors = { C(40, 40, 50), C(255, 220, 180), C(180, 180, 200) }, Kg = { 60, 70 } },
+	{ Id = "SpikyHairPrince", Name = "Spiky-Haired Prince", Biome = "Vinewild", Rarity = "Legendary", Template = "SpikyHairPrince", Archetype = "Golem", Features = { "Spikes" }, Colors = { C(60, 60, 150), C(255, 220, 180), C(255, 230, 80) }, Kg = { 55, 65 } },
+	{ Id = "OnePunchBald", Name = "Bald One-Punch Hero", Biome = "Vinewild", Rarity = "Mythic", Template = "OnePunchBald", Archetype = "Golem", Features = {}, Colors = { C(255, 230, 60), C(255, 225, 190), C(230, 40, 40) }, Kg = { 65, 75 } },
+	{ Id = "MultiverseEgg", Name = "Cosmic Egg Lord", Biome = "AstralRuins", Rarity = "Divine", Template = "MultiverseEgg", Archetype = "Floaty", Features = { "Crown", "Stars" }, Colors = { C(0, 255, 170), C(230, 255, 250), C(255, 220, 90) }, Kg = { 100, 200 } },
+	{ Id = "GrandpaOfAll", Name = "Grandpa of All Dimensions", Biome = "AstralRuins", Rarity = "Divine", Template = "GrandpaOfAll", Archetype = "Golem", Features = { "Halo", "Stars" }, Colors = { C(90, 60, 200), C(230, 220, 255), C(0, 255, 200) }, Kg = { 60, 80 } },
+	{ Id = "GlitchTwin", Name = "Glitched Twin From Another Timeline", Biome = "AstralRuins", Rarity = "Divine", Template = "GlitchTwin", Archetype = "Golem", Features = { "Runes" }, Colors = { C(255, 60, 200), C(255, 220, 245), C(60, 255, 255) }, Kg = { 30, 45 } },
 }
 
 return Pets
