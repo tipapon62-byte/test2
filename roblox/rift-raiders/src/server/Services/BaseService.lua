@@ -24,6 +24,7 @@ type BaseInfo = {
 	Owner: Player?,
 	Floors: { [number]: Instance? },
 	Pads: { Model },
+	Scale: number?,
 	Runtime: Folder,
 	Treadmill: BasePart?,
 	BarrierGroup: string,
@@ -36,7 +37,6 @@ local byPlayer: { [Player]: BaseInfo } = {}
 local Services
 
 local PLAYER_GROUP = "RR_Players"
-local INCUBATOR_SPOTS = { { -26, 26 }, { 26, 26 }, { -14, 26 }, { 14, 26 } } -- {x, depth}; pad order
 local OWNER_COLORS = {
 	Color3.fromRGB(90, 200, 255), Color3.fromRGB(255, 120, 120), Color3.fromRGB(120, 255, 150), Color3.fromRGB(255, 210, 90),
 	Color3.fromRGB(200, 130, 255), Color3.fromRGB(255, 150, 220), Color3.fromRGB(120, 255, 240), Color3.fromRGB(255, 170, 90),
@@ -148,34 +148,27 @@ local function setupBase(model: Model, index: number)
 		laser.Transparency = 0.6
 	end
 
-	for i, spot in ipairs(INCUBATOR_SPOTS) do
-		local pad = safeBuild("BuildIncubator")
-		if not pad then
-			break
-		end
-		pad.Name = "Pad" .. i
-		pad:SetAttribute("Pad", i)
-		pad:PivotTo(BaseService.LocalToWorld(info, spot[1], spot[2]) * CFrame.Angles(0, math.pi, 0))
-		pad.Parent = incubators
-		info.Pads[i] = pad
-	end
+	-- eggs hatch directly on enclosure slots (no incubator machines); props scale with the base
+	local scale = math.clamp(info.Depth / 97, 0.4, 1)
+	info.Scale = scale
 	local fuse = safeBuild("BuildFuseMachine")
 	if fuse then
 		fuse.Name = "FuseMachine"
-		fuse:PivotTo(BaseService.LocalToWorld(info, 30, 50) * CFrame.Angles(0, -math.pi / 2, 0))
+		fuse:ScaleTo(fuse:GetScale() * math.max(scale, 0.6))
+		fuse:PivotTo(BaseService.LocalToWorld(info, info.HalfWidth * 0.5, info.Depth * 0.52) * CFrame.Angles(0, -math.pi / 2, 0))
 		fuse.Parent = info.Runtime
 	end
 	local shop = safeBuild("BuildShopTerminal")
 	if shop then
 		shop.Name = "ShopTerminal"
-		shop:PivotTo(BaseService.LocalToWorld(info, 22, 9) * CFrame.Angles(0, math.pi, 0))
+		shop:ScaleTo(shop:GetScale() * math.max(scale, 0.7))
+		shop:PivotTo(BaseService.LocalToWorld(info, info.HalfWidth * 0.38, info.Depth * 0.1) * CFrame.Angles(0, math.pi, 0))
 		shop.Parent = info.Runtime
 	end
 
 	table.insert(bases, info)
 	byModel[model] = info
 	BaseService.SetVisualFloors(info, 1)
-	BaseService.SetPadCount(info, 0)
 	BaseService.RefreshSign(info)
 end
 
@@ -295,7 +288,7 @@ function BaseService.GetPad(info: BaseInfo, i: number): Model?
 end
 
 function BaseService.GetSpawnCFrame(info: BaseInfo): CFrame
-	return BaseService.LocalToWorld(info, 0, 12, 3)
+	return BaseService.LocalToWorld(info, 0, math.max(5, info.Depth * 0.12), 3)
 end
 
 -- Just outside the front door.
@@ -309,7 +302,7 @@ function BaseService.IsOnTreadmill(info: BaseInfo, pos: Vector3): boolean
 		return false
 	end
 	local p = t.CFrame:PointToObjectSpace(pos)
-	return math.abs(p.X) <= t.Size.X / 2 + 0.6 and math.abs(p.Z) <= t.Size.Z / 2 + 0.6 and p.Y > -1 and p.Y < 6
+	return math.abs(p.X) <= t.Size.X / 2 + 1.5 and math.abs(p.Z) <= t.Size.Z / 2 + 1.5 and p.Y > -1 and p.Y < 8
 end
 
 -- Purchases need the player inside their own base or near the hub shop.
@@ -377,7 +370,6 @@ function BaseService.Release(player: Player)
 	info.Model:SetAttribute("OwnerId", 0)
 	info.Model:SetAttribute("OwnerName", "")
 	BaseService.SetVisualFloors(info, 1)
-	BaseService.SetPadCount(info, 0)
 	BaseService.RefreshSign(info)
 end
 
@@ -390,8 +382,6 @@ function BaseService.ApplyLevels(player: Player)
 	end
 	local lvl = E.BaseLevels[math.clamp(profile.BaseLevel, 1, #E.BaseLevels)]
 	BaseService.SetVisualFloors(info, lvl.VisualFloors)
-	local inc = E.IncubatorLevels[math.clamp(profile.IncubatorLevel, 1, #E.IncubatorLevels)]
-	BaseService.SetPadCount(info, inc.Pads)
 	local tm = E.TreadmillLevels[math.clamp(profile.TreadmillLevel, 1, #E.TreadmillLevels)]
 	for _, d in ipairs(info.Model:GetDescendants()) do
 		if d:IsA("BasePart") and d.Name == "TreadmillGlow" then

@@ -41,7 +41,7 @@ This file is the interface every module codes against. Change it deliberately.
 | Tag | Model | Attributes |
 |---|---|---|
 | `RR_Egg` | world egg | `Uid, Biome, Rarity, Size, Mutation, State ("Nest"/"Carried"/"Dropped"), CarrierId` |
-| `RR_IncubatorEgg` | egg on an incubator pad | `Uid, Biome, Rarity, Size, Mutation, HatchAt (unix, compare with workspace:GetServerTimeNow())` |
+| `RR_IncubatorEgg` | egg hatching on an enclosure slot (workspace.Bases.BaseN.RiftRaiders.Eggs) | `Uid, Biome, Rarity, Size, Mutation, HatchAt (unix, compare with workspace:GetServerTimeNow())` |
 | `RR_Pet` | pet placed in an enclosure | `Uid, Species, Rarity, Size, Mutation, Tier, Income, OwnerId` |
 | `RR_Guardian` | nest guardian | `Biome, State ("Idle"/"Patrol"/"Alert"/"Chase"/"Attack"/"Return"/"Stunned"), Speed` |
 | `RR_Trap` | bear trap | `OwnerId, Armed` |
@@ -58,8 +58,9 @@ This file is the interface every module codes against. Change it deliberately.
   Trails = { Owned = { None = true }, Equipped = "None" },
   Items = { BearTrap = 0, DecoyEgg = 0, MutationPotion = 0 },
   Pets = { [uid] = PetData },                     -- PetData.Slot = enclosure slot or nil (storage)
-  Incubators = { ["1"] = EggData, ... },          -- keyed by pad number as string; HatchAt = unix time
-  EggStorage = { EggData, ... },                  -- delivered eggs waiting for a free pad (max 8)
+  Incubators = { ["7"] = EggData, ... },          -- eggs hatching ON enclosure slots, keyed by slot number as string; HatchAt = unix time.
+                                                  -- A slot holds either a pet or an egg. Derived.Pads = max eggs hatching at once.
+  EggStorage = { EggData, ... },                  -- delivered eggs waiting for a free slot / hatch capacity (max 8)
   Index = { [speciesId] = { First = unix, Count = n } },
   IndexBiomesDone = { [biomeId] = true },
   Stats = { EggsDelivered, EggsRetrieved, PetsHatched, RareHatches, Tags, TrapsSprung,
