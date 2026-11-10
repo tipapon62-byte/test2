@@ -52,7 +52,7 @@ local function template()
 		Quests = { Daily = { Period = -1, List = {} }, Weekly = { Period = -1, List = {} } },
 		Achievements = {},
 		Codes = {},
-		Settings = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true },
+		Settings = { Music = 0.5, Sfx = 0.8, LowGraphics = false, ShowTrails = true, Notifications = true, ConfirmFuse = true, TutorialDone = false },
 		FirstJoin = now,
 		LastOnline = now,
 	}
