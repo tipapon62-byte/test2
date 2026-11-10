@@ -163,6 +163,9 @@ function EffectsController.Start()
 	Net.Event("Knockback").OnClientEvent:Connect(EffectsController.Knockback)
 	Net.Event("Ragdoll").OnClientEvent:Connect(function(on, duration)
 		setRagdoll(on == true, tonumber(duration))
+		if on == true then
+			EffectsController.Shake(1.1, 0.5) -- knocked down
+		end
 	end)
 	Net.Event("Effect").OnClientEvent:Connect(function(name)
 		if name == "Trapped" then

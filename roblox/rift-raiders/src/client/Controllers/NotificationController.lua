@@ -43,7 +43,7 @@ function NotificationController.Notify(text: string, kind: string?)
 	if kind ~= "bad" and not notificationsOn() then
 		return
 	end
-	Components.Toast(escape(text), kind)
+	Components.Toast(escape(Theme.Reword(text)), kind)
 end
 
 -- ===== Banners (queued) =====
@@ -116,6 +116,7 @@ end
 
 function NotificationController.Announce(text: string, color: Color3?)
 	local c = if typeof(color) == "Color3" then color else Theme.Colors.Gold
+	text = Theme.Reword(text)
 	NotificationController.Banner("📣 " .. escape(text), nil, c, 4.5)
 	chatSystemMessage(text, c)
 end
@@ -262,7 +263,7 @@ local function rays(parent, color: Color3): any
 	return burst
 end
 
--- Shows the pet card part of a reveal and waits until the player closes it (or it times out).
+-- Shows the character card part of a reveal and waits until the player closes it (or it times out).
 local function revealCard(modal, pet, headline: string, tags: { string }, isNew: boolean?)
 	if not modal.Frame.Parent then
 		return -- dismissed (B / back) during the egg animation
@@ -346,47 +347,91 @@ local function newModal(): any
 	return holder
 end
 
+-- The character's own egg (3D, in its style) wobbles harder and harder, cracks, bursts into two
+-- halves, then the character card is revealed.
 function NotificationController.ShowHatch(pet, isNew: boolean?)
 	enqueuePopup(function()
 		local species = GameConfig.GetSpecies(pet.Species)
 		local rarity = species and species.Rarity or "Common"
 		local color = Theme.Rarity(rarity)
-		local biome = species and GameConfig.GetBiome(species.Biome)
-		local eggColors = biome and biome.EggColors or { Color3.new(1, 1, 1), color }
+		local eggColors = species and species.Colors or { Color3.new(1, 1, 1), color }
 		local modal = newModal()
 		local stage = modal.Frame
+		local center = UDim2.fromScale(0.5, 0.45)
 
-		-- egg shakes harder and harder, then cracks
-		local egg = New("Frame", {
-			Name = "Egg",
+		local glow = New("Frame", {
+			Name = "EggGlow",
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.45),
-			Size = UDim2.fromOffset(170, 220),
-			BackgroundColor3 = Color3.new(1, 1, 1),
+			Position = center,
+			Size = UDim2.fromOffset(300, 300),
+			BackgroundColor3 = color,
+			BackgroundTransparency = 0.75,
 			Parent = stage,
 		})
-		Components.CornerScale(egg, 0.5)
-		New("UIGradient", { Color = ColorSequence.new(eggColors[1], eggColors[2] or eggColors[1]), Rotation = 90, Parent = egg })
-		New("UIStroke", { Color = color, Thickness = 6, Parent = egg })
+		Components.CornerScale(glow, 0.5)
+		local eggName = Text({
+			Text = GameConfig.EggDisplayName({ Biome = species and species.Biome or "RiftLab", Rarity = rarity, Species = pet.Species, Size = pet.Size }),
+			TextSize = 32,
+			Font = Theme.FontHeavy,
+			Outline = 4,
+			TextColor3 = color,
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 0.45, -165),
+			Size = UDim2.fromOffset(700, 44),
+			Parent = stage,
+		})
+		local egg = Components.EggViewport({ Species = pet.Species, Biome = species and species.Biome, Rarity = rarity, Size = pet.Size, Mutation = pet.Mutation }, {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = center,
+			Size = UDim2.fromOffset(260, 300),
+			Parent = stage,
+		})
 		Components.Pop(egg, 0.3)
-		Text({ Text = "?", TextSize = 72, Font = Theme.FontHeavy, Outline = 4, TextColor3 = color, Parent = egg })
+		local vp = egg:FindFirstChild("Viewport")
+		local cam = vp and vp:IsA("ViewportFrame") and vp.CurrentCamera
+		local baseCF = cam and cam.CFrame
+		-- crack lines drawn over the egg as it shakes
+		local cracks = New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = center, Size = UDim2.fromOffset(160, 200), ZIndex = 3, Parent = stage })
+		local CRACK = { { 0.5, 0.18, 70 }, { 0.42, 0.34, -55 }, { 0.56, 0.48, 60 }, { 0.44, 0.62, -50 }, { 0.6, 0.74, 40 } }
 		task.wait(0.35)
-		local shakes = if lowGraphics() then 4 else 9
+		local shakes = if lowGraphics() then 5 else 10
 		for i = 1, shakes do
-			local amp = 6 + i * 2.5
-			TweenService:Create(egg, TweenInfo.new(0.07), { Rotation = if i % 2 == 0 then amp else -amp }):Play()
-			task.wait(0.07)
+			if not stage.Parent then
+				return
+			end
+			local amp = 2 + i * 1.6
+			local dir = if i % 2 == 0 then 1 else -1
+			egg.Position = UDim2.new(0.5, dir * amp, 0.45, -math.abs(amp) * 0.3)
+			if cam and baseCF then
+				cam.CFrame = baseCF * CFrame.Angles(0, 0, math.rad(dir * (4 + i * 2)))
+			end
+			glow.BackgroundTransparency = 0.75 - i * 0.04
+			local c = CRACK[math.ceil(i / 2)]
+			if c and i % 2 == 0 then
+				New("Frame", {
+					BackgroundColor3 = Theme.Colors.Stroke,
+					BorderSizePixel = 0,
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(c[1], c[2]),
+					Size = UDim2.fromOffset(46, 5),
+					Rotation = c[3],
+					ZIndex = 3,
+					Parent = cracks,
+				})
+			end
+			Components.PlaySound("Wobble")
+			task.wait(if i > shakes - 3 then 0.06 else 0.1)
 		end
 		if not stage.Parent then
 			return
 		end
-		egg.Rotation = 0
+		Components.PlaySound("Crack")
 		-- crack: two halves fly apart
 		local halves = {}
 		for side = -1, 1, 2 do
 			local half = New("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = egg.Position,
+				Position = UDim2.new(0.5, 0, 0.45, side * 50),
 				Size = UDim2.fromOffset(170, 110),
 				BackgroundColor3 = Color3.new(1, 1, 1),
 				Parent = stage,
@@ -402,6 +447,9 @@ function NotificationController.ShowHatch(pet, isNew: boolean?)
 			}):Play()
 		end
 		egg:Destroy()
+		cracks:Destroy()
+		glow:Destroy()
+		eggName:Destroy()
 		flash(color, nil)
 		task.delay(0.6, function()
 			for _, h in ipairs(halves) do
@@ -409,6 +457,7 @@ function NotificationController.ShowHatch(pet, isNew: boolean?)
 			end
 		end)
 		local rIndex = Theme.RarityIndex(rarity)
+		Components.PlaySound(if rIndex >= 4 then "HatchBig" else "Hatch")
 		if rIndex >= 4 then
 			-- Epic+: confetti burst (bigger for Legendary and up)
 			Components.Confetti({ color, Theme.Lighten(color, 0.45), Theme.Colors.Gold, Color3.new(1, 1, 1) }, if rIndex >= 5 then 110 else 70)
@@ -432,6 +481,7 @@ function NotificationController.ShowFuse(data)
 			table.insert(tags, "🥚 Bonus: " .. GameConfig.EggDisplayName(data.BonusEgg))
 		end
 		flash(Theme.Colors.Accent2, nil)
+		Components.PlaySound("Hatch")
 		revealCard(modal, data.Pet, "🔮 FUSION COMPLETE!", tags, false)
 	end)
 end
@@ -454,7 +504,7 @@ local handlers: { [string]: (any) -> () } = {
 	end,
 	Discovery = function(d)
 		local s = GameConfig.GetSpecies(d.Species)
-		Components.Toast(("📖 New species: <b>%s</b>  +💎 %s"):format(escape(s and s.Name or tostring(d.Species)), Fmt(d.Shards or 0)), "good", 4)
+		Components.Toast(("📖 New character discovered: <b>%s</b>  +💎 %s"):format(escape(s and s.Name or tostring(d.Species)), Fmt(d.Shards or 0)), "good", 4)
 	end,
 	Unlock = function(d)
 		local b = GameConfig.GetBiome(d.Biome)
