@@ -62,7 +62,7 @@ function FuseController.AutoPick(pets, key: string?): { string }?
 end
 
 function FuseController.Start()
-	local win = Components.Window("Fuse", "Fuse Machine", Theme.Icons.Fuse, { TitleColor = Color3.fromRGB(170, 70, 255) })
+	local win = Components.Window("Fuse", "Fuse Machine", Theme.Icons.Fuse, { TitleColor = Theme.Buttons.Fuse })
 	local body = win.Body
 
 	-- ===== left: picker =====
@@ -320,13 +320,15 @@ function FuseController.Start()
 				Name = pet.Uid,
 				Text = "",
 				AutoButtonColor = false,
-				BackgroundColor3 = Theme.Darken(color, 0.6),
+				BackgroundColor3 = color,
 				LayoutOrder = i,
 				Parent = picker,
 			})
 			Components.Selectable(card)
 			Components.Corner(card, 12)
-			local stroke = Components.Stroke(card, color, 3)
+			Components.Gradient(card, Theme.Lighten(color, 0.15), Theme.Darken(color, 0.4))
+			local stroke = Components.Stroke(card, Theme.Colors.Stroke, 4)
+			Components.Squash(card)
 			Components.PetViewport(pet, { Size = UDim2.new(1, -8, 0, 70), Position = UDim2.fromOffset(4, 2), Parent = card })
 			Text({
 				Text = GameConfig.PetDisplayName(pet),
@@ -360,7 +362,7 @@ function FuseController.Start()
 			card.Activated:Connect(function()
 				toggle(pet.Uid)
 			end)
-			pickerCards[pet.Uid] = { Frame = card, Stroke = stroke, Color = color, Check = check, Key = groupKey(pet), Locked = pet.Locked }
+			pickerCards[pet.Uid] = { Frame = card, Stroke = stroke, Color = Theme.Colors.Stroke, Check = check, Key = groupKey(pet), Locked = pet.Locked }
 		end
 		refreshPickerHighlight()
 	end

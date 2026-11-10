@@ -47,6 +47,7 @@ function Props.Incubator(): Model
 	model:SetAttribute("PadTopY", PAD_TOP_Y)
 	model:SetAttribute("Height", 4.8)
 	model:SetAttribute("Archetype", "Incubator")
+	Kit.Brickify(model)
 	return model
 end
 
@@ -120,6 +121,7 @@ function Props.FuseMachine(): Model
 
 	model:SetAttribute("Height", 9.95)
 	model:SetAttribute("Archetype", "FuseMachine")
+	Kit.Brickify(model)
 	return model
 end
 
@@ -159,6 +161,7 @@ function Props.ShopTerminal(): Model
 	Kit.VCyl(model, top, "CoinStick", 0.6, 0.15, CF(-0.6, 6.9, 0), C(200, 205, 220), "Belly", Metal)
 	model:SetAttribute("Height", 8.35)
 	model:SetAttribute("Archetype", "ShopTerminal")
+	Kit.Brickify(model)
 	return model
 end
 
@@ -221,6 +224,7 @@ function Props.BearTrap(): Model
 	model:SetAttribute("Height", 0.5)
 	model:SetAttribute("Archetype", "BearTrap")
 	model:SetAttribute("Closed", false)
+	Kit.Brickify(model)
 	return model
 end
 
@@ -244,18 +248,20 @@ function Props.FoamBat(): Model
 	local handle = Kit.Add(model, root, "Handle", "Block", V3(0.45, 1.1, 0.45), CF(0, 0.75, 0), C(45, 45, 60), "Main")
 	handle.Transparency = 1
 	handle.CastShadow = false
-	Kit.VCyl(model, handle, "Grip", 1.1, 0.42, CF(0, 0.75, 0), C(45, 45, 60), "Main")
-	Kit.Add(model, handle, "Pommel", "Ball", V3(0.6, 0.6, 0.6), CF(0, 0.3, 0), yellow, "Accent")
-	Kit.VCyl(model, handle, "Guard", 0.2, 0.8, CF(0, 1.35, 0), cyan, "Accent")
-	local foam = Kit.VCyl(model, handle, "Foam", 2.6, 0.95, CF(0, 2.75, 0), pink, "Main")
+	-- chunky toy-brick bat: square studded foam blocks
+	Kit.Add(model, handle, "Grip", "Block", V3(0.42, 1.1, 0.42), CF(0, 0.75, 0), C(45, 45, 60), "Main")
+	Kit.Add(model, handle, "Pommel", "Block", V3(0.62, 0.4, 0.62), CF(0, 0.2, 0), yellow, "Accent")
+	Kit.Add(model, handle, "Guard", "Block", V3(0.9, 0.22, 0.9), CF(0, 1.35, 0), cyan, "Accent")
+	local foam = Kit.Add(model, handle, "Foam", "Block", V3(0.95, 2.6, 0.95), CF(0, 2.75, 0), pink, "Main")
 	for i, y in { 1.95, 2.75, 3.55 } do
-		noShadow(Kit.VCyl(model, foam, "Stripe", 0.2, 0.99, CF(0, y, 0) * ANG(rad(12), 0, 0), i == 2 and yellow or cyan,
+		noShadow(Kit.Add(model, foam, "Stripe", "Block", V3(1.01, 0.2, 1.01), CF(0, y, 0), i == 2 and yellow or cyan,
 			"Accent"))
 	end
-	Kit.Add(model, foam, "Tip", "Ball", V3(1.0, 1.0, 1.0), CF(0, 4.05, 0), Kit.Lighter(pink, 0.15), "Main")
-	noShadow(Kit.Diamond(model, foam, "Sticker", 0.42, 0.06, CF(0, 2.35, -0.47), yellow, "Glow", Neon))
+	Kit.Add(model, foam, "Tip", "Block", V3(1.1, 0.5, 1.1), CF(0, 4.3, 0), Kit.Lighter(pink, 0.15), "Main")
+	noShadow(Kit.Diamond(model, foam, "Sticker", 0.42, 0.06, CF(0, 2.35, -0.5), yellow, "Glow", Neon))
 	model:SetAttribute("Height", 4.55)
 	model:SetAttribute("Archetype", "FoamBat")
+	Kit.Brickify(model)
 	return model
 end
 

@@ -307,8 +307,9 @@ function Kit.Face(model: Model, head: BasePart, o)
 		local side = s < 0 and "L" or "R"
 		local c = Kit.Facing(head, V3(s * spread, ey, -1), ed * 0.24)
 		local glow = o.Glow
-		Kit.Add(model, head, "Eye" .. side, "Ball", V3(ed, ed, ed), c, glow or Kit.White, "Eye",
+		local eye = Kit.Add(model, head, "Eye" .. side, "Ball", V3(ed, ed, ed), c, glow or Kit.White, "Eye",
 			glow and Enum.Material.Neon or nil)
+		eye.Reflectance = glow and 0 or 0.12
 		-- closed-eye line hidden inside the eye white; shows when the animator hides the eye for a blink
 		local lid = Kit.Add(model, head, "Lid" .. side, "Block", V3(ed * 0.7, ed * 0.09, ed * 0.2),
 			c * CF(0, -ed * 0.04, -ed * 0.22), Kit.Ink, "Face")
@@ -317,6 +318,7 @@ function Kit.Face(model: Model, head: BasePart, o)
 		local pupil = Kit.Add(model, head, "Pupil" .. side, "Ell", pupilSize, c * CF(-s * ed * 0.04, -ed * 0.03, -ed * 0.36),
 			Kit.Ink, "Eye")
 		pupil.CastShadow = false
+		pupil.Reflectance = 0.15
 		local shine = Kit.Add(model, head, "Shine" .. side, "Ball", V3(ed * 0.2, ed * 0.2, ed * 0.2),
 			c * CF(s * ed * 0.13, ed * 0.16, -ed * 0.46), Kit.White, "Eye", Enum.Material.Neon)
 		shine.CastShadow = false
@@ -350,6 +352,58 @@ function Kit.Face(model: Model, head: BasePart, o)
 	else
 		local mouth = Kit.Add(model, mouthPart, "Mouth", "Ell", V3(ed * 0.36, ed * 0.17, ed * 0.14), mcf, Kit.Ink, "Face")
 		mouth.CastShadow = false
+	end
+end
+
+-- ===================================================================== brick look
+
+local NO_BRICK_ROLES = { Eye = true, Gloss = true, Fx = true, Glow = true, Glass = true }
+local KEEP_MATERIALS = {
+	[Enum.Material.Neon] = true,
+	[Enum.Material.Glass] = true,
+	[Enum.Material.ForceField] = true,
+}
+-- parts whose front stays smooth so the face reads like a printed minifig face
+local SMOOTH_FRONT = { Head = true, Snout = true, Muzzle = true }
+
+local function eyeLike(name: string): boolean
+	return string.match(name, "^Eye") ~= nil or string.match(name, "^Pupil") ~= nil
+		or string.match(name, "^Shine") ~= nil or string.match(name, "^Iris") ~= nil
+end
+
+-- Toy-brick restyle: Plastic material, studs on top faces (and on every large face of body parts),
+-- inlets underneath. Eyes, glows, glass and effects are left glossy/untouched. Safe on any model.
+function Kit.Brickify(model: Instance)
+	local Studs, Inlet, Smooth = Enum.SurfaceType.Studs, Enum.SurfaceType.Inlet, Enum.SurfaceType.Smooth
+	for _, d in model:GetDescendants() do
+		if not d:IsA("BasePart") or d.Name == "Root" or d.Transparency >= 0.99 then
+			continue
+		end
+		local role = d:GetAttribute("Role")
+		if (role and NO_BRICK_ROLES[role]) or KEEP_MATERIALS[d.Material] or (role == nil and eyeLike(d.Name)) then
+			continue
+		end
+		d.Material = Enum.Material.Plastic
+		d.BottomSurface = Inlet
+		local s = d.Size
+		local isBlock = d:IsA("Part") and (d :: Part).Shape == Enum.PartType.Block
+			and d:FindFirstChildOfClass("SpecialMesh") == nil
+		if not isBlock or role == "Face" then
+			d.TopSurface = Smooth
+			continue
+		end
+		d.TopSurface = math.min(s.X, s.Z) >= 0.45 and Studs or Smooth
+		local bodyPart = role == nil or role == "Main" or role == "Belly"
+		if bodyPart and math.min(s.X, s.Y, s.Z) >= 0.5 then
+			if math.min(s.X, s.Y) >= 0.8 then
+				d.FrontSurface = SMOOTH_FRONT[d.Name] and Smooth or Studs
+				d.BackSurface = Studs
+			end
+			if math.min(s.Y, s.Z) >= 0.8 then
+				d.LeftSurface = Studs
+				d.RightSurface = Studs
+			end
+		end
 	end
 end
 

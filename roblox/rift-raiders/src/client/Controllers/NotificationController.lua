@@ -167,20 +167,34 @@ local function floatCoins(amount: number)
 	local root = Components.Layer("Toasts")
 	local label = Text({
 		Text = "+🪙 " .. Fmt(amount),
-		TextSize = 34,
+		TextSize = 40,
 		Font = Theme.FontHeavy,
-		Outline = 3,
+		Outline = 4,
 		TextColor3 = Theme.Colors.Coins,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, math.random(-120, 120), 0.45, 0),
-		Size = UDim2.fromOffset(300, 50),
+		Size = UDim2.fromOffset(300, 54),
 		Parent = root,
 	})
-	Components.Pop(label, 0.4)
-	TweenService:Create(label, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -260, 0, 30),
-		TextTransparency = 1,
+	Components.Pop(label, 0.4, Theme.Tween.Bounce)
+	-- fly into the HUD coin counter
+	local anchor = Components.Anchors.Coins
+	local target = UDim2.new(0, 60, 1, -60)
+	if anchor and anchor.Parent then
+		target = Components.ToLayer(root, anchor.AbsolutePosition + anchor.AbsoluteSize * 0.5)
+	end
+	task.wait(0.35)
+	if not label.Parent then
+		return
+	end
+	TweenService:Create(label, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+		Position = target,
+		TextTransparency = 0.6,
 	}):Play()
+	local s = label:FindFirstChild("PopScale")
+	if s then
+		TweenService:Create(s, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.4 }):Play()
+	end
 	task.delay(1.5, function()
 		label:Destroy()
 	end)
@@ -265,9 +279,11 @@ local function revealCard(modal, pet, headline: string, tags: { string }, isNew:
 		Size = UDim2.fromOffset(560, 540),
 		Parent = stage,
 	})
-	Text({ Text = headline, TextSize = 40, Font = Theme.FontHeavy, Outline = 4, TextColor3 = color, Size = UDim2.new(1, 0, 0, 52), Parent = panel })
+	Text({ Text = headline, TextSize = 44, Font = Theme.FontHeavy, Outline = 5, TextColor3 = color, Size = UDim2.new(1, 0, 0, 52), Parent = panel })
+	local glow = Components.Card({ Color = color, Size = UDim2.fromOffset(310, 236), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 54), Corner = 28, StrokeThickness = 6, Parent = panel })
+	Components.Shine(glow, 0.6)
 	Components.PetViewport(pet, { Spin = true, Size = UDim2.fromOffset(280, 230), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 56), Parent = panel })
-	Text({ Text = GameConfig.PetDisplayName(pet), TextSize = 34, Outline = 3, Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 290), Parent = panel })
+	Text({ Text = GameConfig.PetDisplayName(pet), TextSize = 36, Font = Theme.FontHeavy, Outline = 4, Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 294), Parent = panel })
 	Components.RarityBadge(rarity, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 338), Size = UDim2.fromOffset(160, 32), Parent = panel })
 	Text({
 		Text = ("🪙 %s/s  ·  %s  ·  %.1f kg"):format(Fmt(GameConfig.PetIncome(pet)), pet.Mutation or "No mutation", pet.Kg or 0),
@@ -392,7 +408,12 @@ function NotificationController.ShowHatch(pet, isNew: boolean?)
 				h:Destroy()
 			end
 		end)
-		local headline = if GameConfig.Rarities.ById[rarity] and GameConfig.Rarities.ById[rarity].Index >= 5 then "✨ " .. string.upper(rarity) .. "! ✨" else "You hatched..."
+		local rIndex = Theme.RarityIndex(rarity)
+		if rIndex >= 4 then
+			-- Epic+: confetti burst (bigger for Legendary and up)
+			Components.Confetti({ color, Theme.Lighten(color, 0.45), Theme.Colors.Gold, Color3.new(1, 1, 1) }, if rIndex >= 5 then 110 else 70)
+		end
+		local headline = if rIndex >= 4 then "✨ " .. string.upper(rarity) .. "! ✨" else "You hatched..."
 		revealCard(modal, pet, headline, {}, isNew)
 	end)
 end
@@ -416,27 +437,7 @@ function NotificationController.ShowFuse(data)
 end
 
 local function confetti(colorA: Color3, colorB: Color3)
-	if lowGraphics() then
-		return
-	end
-	local root = Components.Layer("Toasts")
-	for i = 1, 40 do
-		local piece = New("Frame", {
-			BackgroundColor3 = if i % 2 == 0 then colorA else colorB,
-			Size = UDim2.fromOffset(math.random(10, 18), math.random(14, 24)),
-			Position = UDim2.new(math.random(), 0, 0, -30),
-			Rotation = math.random(0, 360),
-			Parent = root,
-		})
-		local fall = TweenService:Create(piece, TweenInfo.new(math.random(18, 32) / 10, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Position = UDim2.new(piece.Position.X.Scale + (math.random() - 0.5) * 0.2, 0, 1.1, 0),
-			Rotation = piece.Rotation + math.random(-360, 360),
-		})
-		fall:Play()
-		fall.Completed:Connect(function()
-			piece:Destroy()
-		end)
-	end
+	Components.Confetti({ colorA, colorB, Theme.Lighten(colorA, 0.4), Color3.new(1, 1, 1) }, 80)
 end
 
 -- ===== Effect dispatcher =====

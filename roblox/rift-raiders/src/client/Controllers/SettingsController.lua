@@ -120,14 +120,14 @@ local function slider(parent, order: number, label: string, key: string): () -> 
 		Text = "",
 		AutoButtonColor = false,
 		Selectable = false,
-		BackgroundColor3 = Theme.Colors.WindowDark,
-		Position = UDim2.new(0, 220, 0.5, -10),
-		Size = UDim2.new(1, -460, 0, 20),
+		BackgroundColor3 = Color3.fromRGB(22, 32, 72),
+		Position = UDim2.new(0, 220, 0.5, -11),
+		Size = UDim2.new(1, -460, 0, 22),
 		Parent = row,
 	})
 	Components.CornerScale(track, 0.5)
-	Components.Stroke(track, Theme.Colors.Stroke, 2)
-	local fill = New("Frame", { BackgroundColor3 = Theme.Colors.Accent, Size = UDim2.fromScale(0.5, 1), Parent = track })
+	Components.Stroke(track, Theme.Colors.Stroke, 3)
+	local fill = New("Frame", { BackgroundColor3 = Theme.Colors.Good, Size = UDim2.fromScale(0.5, 1), Parent = track })
 	Components.CornerScale(fill, 0.5)
 	local knob = New("Frame", {
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -218,28 +218,27 @@ local function toggle(parent, order: number, label: string, hint: string, key: s
 		Position = UDim2.fromOffset(16, 40),
 		Parent = row,
 	})
-	local btn = Components.Button({
-		Text = "",
-		TextSize = 22,
-		Size = UDim2.fromOffset(150, 56),
+	local switch = Components.Switch({
+		Value = settings[key] == true,
+		Size = UDim2.fromOffset(110, 54),
 		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -12, 0.5, 0),
+		Position = UDim2.new(1, -14, 0.5, 0),
 		Parent = row,
+		OnChanged = function(v)
+			changed(key, v)
+		end,
 	})
 	local function render()
 		local on = settings[key] == true
-		Components.SetText(btn, if on then "ON" else "OFF")
-		Components.SetColor(btn, if on then Theme.Colors.Good else Theme.Colors.Bad)
+		if switch.Get() ~= on then
+			switch.Set(on, true)
+		end
 	end
-	Components.SetOnClick(btn, function()
-		changed(key, not (settings[key] == true))
-		render()
-	end)
 	return render
 end
 
 function SettingsController.Start()
-	local win = Components.Window("Settings", "Settings", Theme.Icons.Settings, { TitleColor = Color3.fromRGB(110, 110, 150) })
+	local win = Components.Window("Settings", "Settings", Theme.Icons.Settings, { TitleColor = Theme.Buttons.Settings })
 	local list = Components.ScrollList(win.Body, 8)
 	local renders = {
 		slider(list, 1, "🎵 Music", "Music"),

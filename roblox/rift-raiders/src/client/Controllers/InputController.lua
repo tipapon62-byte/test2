@@ -157,11 +157,31 @@ local function buildTouchButtons(): (any, { [string]: any })
 			BackgroundColor3 = a.Color,
 			Parent = gui,
 		})
-		Components.CornerScale(btn, 0.5)
-		Components.Gradient(btn, Theme.Lighten(a.Color, 0.2), Theme.Darken(a.Color, 0.3))
-		Components.Stroke(btn, Theme.Colors.Stroke, 3)
-		local icon = Text({ Name = "Icon", Text = a.Icon, TextScaled = true, Outline = false, Size = UDim2.fromScale(0.55, 0.5), Position = UDim2.fromScale(0.225, 0.1), Parent = btn })
-		local label = Text({ Name = "Label", Text = a.Label, TextScaled = true, Size = UDim2.fromScale(0.8, 0.24), Position = UDim2.fromScale(0.1, 0.62), Parent = btn })
+		-- chunky outlined style: rounded square, dark bevel lip, glossy top
+		Components.CornerScale(btn, 0.28)
+		Components.Gradient(btn, Theme.Lighten(a.Color, 0.15), Theme.Darken(a.Color, 0.15))
+		Components.Stroke(btn, Theme.Colors.Stroke, 4)
+		local lip = New("Frame", {
+			Name = "Lip",
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.75,
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.fromScale(1, 0.2),
+			Parent = btn,
+		})
+		Components.CornerScale(lip, 0.28)
+		local shine = New("Frame", {
+			Name = "Shine",
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 0.7,
+			Position = UDim2.fromScale(0.1, 0.06),
+			Size = UDim2.fromScale(0.8, 0.22),
+			Parent = btn,
+		})
+		Components.CornerScale(shine, 0.5)
+		local icon = Text({ Name = "Icon", Text = a.Icon, TextScaled = true, Outline = false, ZIndex = 2, Size = UDim2.fromScale(0.56, 0.5), Position = UDim2.fromScale(0.22, 0.08), Parent = btn })
+		local label = Text({ Name = "Label", Text = a.Label, TextScaled = true, Font = Theme.FontHeavy, Outline = 2.5, ZIndex = 2, Size = UDim2.fromScale(0.86, 0.28), Position = UDim2.fromScale(0.07, 0.6), Parent = btn })
 		local cd = New("Frame", {
 			Name = "Cooldown",
 			BackgroundColor3 = Color3.new(0, 0, 0),
@@ -172,10 +192,10 @@ local function buildTouchButtons(): (any, { [string]: any })
 			ZIndex = 3,
 			Parent = btn,
 		})
-		Components.CornerScale(cd, 0.5)
+		Components.CornerScale(cd, 0.28)
 		local badge = New("Frame", {
 			Name = "Badge",
-			BackgroundColor3 = Theme.Colors.Accent2,
+			BackgroundColor3 = Theme.Colors.Badge,
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, 4, 0, -4),
 			Size = UDim2.fromScale(0.5, 0.3),
@@ -184,12 +204,12 @@ local function buildTouchButtons(): (any, { [string]: any })
 			Parent = btn,
 		})
 		Components.CornerScale(badge, 0.5)
-		Components.Stroke(badge, Theme.Colors.Stroke, 2)
+		Components.Stroke(badge, Color3.new(1, 1, 1), 3)
 		local badgeLabel = Text({ Text = "", TextScaled = true, ZIndex = 5, Size = UDim2.fromScale(0.8, 0.8), Position = UDim2.fromScale(0.1, 0.1), Parent = badge })
 		local scale = New("UIScale", { Parent = btn })
 		btn.Activated:Connect(function()
-			scale.Scale = 0.85
-			Components.Tween(scale, Theme.Tween.Pop, { Scale = 1 })
+			scale.Scale = 0.82
+			Components.Tween(scale, Theme.Tween.Bounce, { Scale = 1 })
 			RUN[a.Id]()
 		end)
 		buttons[a.Id] = { Button = btn, Cooldown = cd, Badge = badge, BadgeLabel = badgeLabel, Icon = icon, Label = label }
@@ -244,15 +264,15 @@ local function buildHints(): { [string]: any }
 	for i, a in ipairs(ACTIONS) do
 		local chip = New("Frame", {
 			Name = a.Id,
-			BackgroundColor3 = Theme.Colors.WindowDark,
-			BackgroundTransparency = 0.1,
+			BackgroundColor3 = Theme.Colors.PillBg,
+			BackgroundTransparency = 0.25,
 			Size = UDim2.fromOffset(140, 50),
 			LayoutOrder = i,
 			ClipsDescendants = true,
 			Parent = bar,
 		})
 		Components.CornerScale(chip, 0.4)
-		Components.Stroke(chip, Theme.Colors.Stroke, 3)
+		Components.Stroke(chip, Theme.Colors.Stroke, 4)
 		local cd = New("Frame", {
 			Name = "Cooldown",
 			BackgroundColor3 = a.Color,
@@ -263,7 +283,7 @@ local function buildHints(): { [string]: any }
 		Components.CornerScale(cd, 0.4)
 		local key = New("Frame", { BackgroundColor3 = a.Color, Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(5, 5), ZIndex = 2, Parent = chip })
 		Components.Corner(key, 10)
-		Components.Stroke(key, Theme.Colors.Stroke, 2)
+		Components.Stroke(key, Theme.Colors.Stroke, 3)
 		local keyLabel = Text({ Text = "", TextSize = 20, ZIndex = 3, Parent = key })
 		local label = Text({
 			Text = a.Icon .. " " .. a.Label,

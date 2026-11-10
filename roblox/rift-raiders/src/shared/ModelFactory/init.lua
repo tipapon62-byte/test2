@@ -1,4 +1,5 @@
--- ModelFactory: builds every creature, egg and prop procedurally from parts (no asset ids).
+-- ModelFactory: builds every creature, egg and prop from parts (no asset ids) in a toy-brick (LEGO) style.
+-- Classic characters are restyled from ReplicatedStorage.CharacterModels.<Species.Template> when present.
 --
 -- Every returned Model: PrimaryPart "Root" (anchored, invisible, non-colliding) at the bottom centre,
 -- facing Root's -Z; all other parts unanchored + massless and joined with Motor6Ds named after their
@@ -6,6 +7,7 @@
 -- Models are built at the origin and returned unparented; no tags or scripts are added.
 
 local GameConfig = require(script.Parent.GameConfig)
+local Kit = require(script.Style)
 local Mutation = require(script.Mutation)
 local Pet = require(script.Pet)
 local Egg = require(script.Egg)
@@ -58,6 +60,12 @@ end
 
 function ModelFactory.ApplyMutation(model: Model, mutationId: string?)
 	Mutation.Apply(model, mutationId)
+end
+
+-- Toy-brick restyle for any model (Plastic, studs on top/large faces, inlets below); eyes, neon,
+-- glass and effect parts are left untouched. Every factory model is already brickified.
+function ModelFactory.Brickify(model: Model)
+	Kit.Brickify(model)
 end
 
 local TRAIL_NAME = "RR_Trail"

@@ -13,14 +13,14 @@ Contents: [1 GDD](#1-game-design) · [2 Systems](#2-systems-and-dependencies) ·
 A lab accident tore the multiverse open. Eight shard-universes now hang off the Rift Lab like beads on a string, each one full of nests guarded by their furious mothers. You are a **Rift Raider**: sprint into a universe, snatch an egg, outrun its guardian (and rival raiders), and hatch it at home. Your **Riftlings** earn coins every second; coins buy a faster treadmill, a bigger enclosure and the keys to deeper, deadlier universes.
 
 ### Core loop
-1. Spawn in your personal base (enclosure, incubators, treadmill, shop terminal, fuse machine).
+1. Spawn in your compact personal base (enclosure slots, treadmill, shop terminal, fuse machine).
 2. Leave through your base barrier and run down the **Rift Run** lane.
 3. Pass a biome gate (needs **Speed** and that biome's **Rift Key**).
 4. Find a nest, press **E / ButtonX / tap** (ProximityPrompt) to steal the egg.
 5. The **nest guardian** wakes ("!") and chases you. Carrying slows you (Normal ×0.88, Large ×0.80, Huge ×0.72).
 6. Run home. Rivals can bonk you with a **foam bat** or catch you in a **bear trap**; guardians and hazards knock you down. A knockdown drops the egg — anyone can grab it.
-7. Cross your own base barrier → the egg is **delivered** (only now permanently yours) → incubator pad (or the egg shelf queue).
-8. Timer ends → the egg hatches into a pet; it's placed in a free enclosure slot and earns coins/sec.
+7. Cross your own base barrier → the egg is **delivered** (only now permanently yours) → it sits on a free enclosure slot and starts hatching (or waits in the egg queue).
+8. Timer ends → the egg cracks open right on its slot and becomes the pet, which earns coins/sec.
 9. Spend coins on upgrades; train Speed on the treadmill (AFK works, actively running works better).
 10. More Speed + keys → farther biomes → rarer eggs → more income. Late game: fuse, collect, rebirth.
 
@@ -49,7 +49,16 @@ Biomes are physically separated by force-field **gates** (server-enforced: under
 One per `GuardianHome` (up to 4 per zone). Stats per biome in [§9](#9-balance). Behaviour: Patrol (wander near home) → Alert "!" (0.35 s) → Chase (speed = biome speed × rarity multiplier × size bonus × event multiplier) → Attack (range, cooldown, knockback, ragdoll, egg drop) → Stunned 2.5 s → Return "?" → Patrol. Detection radius + line of sight (map walls/decor block sight); gives up after 3 s without sight, when the thief leaves the aggression (leash) zone, or enters any base. Guardians are clamped inside their zone, so they physically can't reach a base.
 
 ### Pets
-38 original species (5 per early biome, 4 in later ones + an event-only Divine). Each pet has species, rarity, size, mutation, fusion tier (★), weight (kg), name (optional, filtered), procedural model and income.
+66 species: 38 original creatures plus the **28 classic characters** of the original place (Mad Science, Yellow Town, Bikini Deep, Meme Universe and Anime Dimension casts and the 3 Multiverse secrets), now hatchable from eggs of the matching biome and restyled by `ModelFactory` in a chunky LEGO-brick look. Each pet has species, rarity, size, mutation, fusion tier (★), weight (kg), name (optional, filtered), model and income.
+
+### Hub & base feel
+* Bases are 4× smaller in area than in the original map (compact, readable, quick to cross).
+* The hub **speed lanes** (chevron road) give ×1.7 walk speed while you're on them; the **conveyor belt** carries you toward the Rift Run.
+* The treadmill belt moves under you while you run (run in place, ×Efficiency gain); standing still still trains (AFK gain) without being pushed off. Floating "+N ⚡" popups show training.
+* Epic+ eggs in nests shoot a tall light beacon visible from far away; hatching eggs wobble, crack and glow harder as the timer runs out.
+
+### Pets (stats)
+Classic characters keep their names and look; the 38 original species use 8 procedural archetypes.
 `income = biome.IncomeBase × rarity.IncomeMult × size.IncomeMult × mutation.IncomeMult × tierMult` then × base bonus × rebirth bonus.
 The **Index** shows every species per biome; first discovery pays Rift Shards (1–50 by rarity), completing a biome pays 40.
 

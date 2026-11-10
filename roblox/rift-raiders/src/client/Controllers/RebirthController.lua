@@ -26,7 +26,7 @@ local function hex(c: Color3): string
 end
 
 function RebirthController.Start()
-	local win = Components.Window("Rebirth", "Rebirth", Theme.Icons.Rebirth, { TitleColor = Color3.fromRGB(0, 190, 150) })
+	local win = Components.Window("Rebirth", "Rebirth", Theme.Icons.Rebirth, { TitleColor = Theme.Buttons.Rebirth })
 	local body = win.Body
 
 	local leftCard = Components.Card({ Color = Theme.Colors.Panel, Size = UDim2.new(0.5, -8, 1, -84), Parent = body })
