@@ -10,6 +10,7 @@ local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
 local ModelFactory = require(Shared:WaitForChild("ModelFactory"))
 local RateLimiter = require(script.Parent.Parent.Util.RateLimiter)
+local Slots = require(script.Parent.Parent.Util.Slots)
 
 local R = GameConfig.Rarities
 local E = GameConfig.Economy
@@ -26,24 +27,7 @@ local function slotsOf(profile): number
 end
 
 local function freeSlot(profile): number?
-	local used = {}
-	for _, pet in pairs(profile.Pets) do
-		if pet.Slot then
-			used[pet.Slot] = true
-		end
-	end
-	for key in pairs(profile.Incubators or {}) do
-		local n = tonumber(key)
-		if n then
-			used[n] = true -- an egg is hatching there
-		end
-	end
-	for i = 1, slotsOf(profile) do
-		if not used[i] then
-			return i
-		end
-	end
-	return nil
+	return Slots.Free(profile, slotsOf(profile))
 end
 PetService.FreeSlot = freeSlot
 
@@ -171,7 +155,7 @@ function PetService.StoreOverflow(player: Player)
 	end
 	local max = slotsOf(profile)
 	for _, pet in pairs(profile.Pets) do
-		if pet.Slot and pet.Slot > max then
+		if pet.Slot and not Slots.IsValid(pet.Slot, max) then
 			pet.Slot = nil
 		end
 	end
@@ -204,10 +188,10 @@ function PetService.AddPet(player: Player, pet, preferredSlot: number?): (any, b
 		-- inventory full: auto-sell so nothing is silently lost
 		local value = GameConfig.PetSellValue(pet)
 		Services.DataService.AddCoins(player, value, true)
-		Services.DataService.Notify(player, ("Pet storage full — %s was sold for %s coins."):format(GameConfig.PetDisplayName(pet), GameConfig.FormatNumber(value)), "warn")
+		Services.DataService.Notify(player, ("Character storage full — %s was sold for %s coins."):format(GameConfig.PetDisplayName(pet), GameConfig.FormatNumber(value)), "warn")
 		return pet, false
 	end
-	pet.Slot = if preferredSlot and preferredSlot <= slotsOf(profile) then preferredSlot else freeSlot(profile)
+	pet.Slot = if Slots.IsFree(profile, preferredSlot, slotsOf(profile)) then preferredSlot else freeSlot(profile)
 	profile.Pets[pet.Uid] = pet
 	local isNew = profile.Index[pet.Species] == nil
 	local entry = profile.Index[pet.Species] or { First = os.time(), Count = 0 }
@@ -322,7 +306,7 @@ function actions.Sell(player, profile, uids)
 		end
 	end
 	if n > 0 then
-		Services.DataService.Notify(player, ("Sold %d pet(s) for %s coins."):format(n, GameConfig.FormatNumber(total)), "good")
+		Services.DataService.Notify(player, ("Sold %d character(s) for %s coins."):format(n, GameConfig.FormatNumber(total)), "good")
 	end
 	changed(player)
 end
@@ -403,7 +387,7 @@ function actions.MutationPotion(player, profile, uids)
 	end
 	local result = Util.WeightedPick(weights, R.MutationOrder)
 	if not result then
-		Services.DataService.Notify(player, "This pet already has the best mutation!", "info")
+		Services.DataService.Notify(player, "This character already has the best mutation!", "info")
 		return
 	end
 	profile.Items.MutationPotion -= 1
@@ -427,16 +411,40 @@ function PetService.Start()
 		local used = {}
 		for uid, pet in pairs(profile.Pets) do
 			if not GameConfig.GetSpecies(pet.Species) then
-				profile.Pets[uid] = nil
-			elseif pet.Slot and (pet.Slot > max or used[pet.Slot]) then
+				-- removed animal species from older versions become a character of the same biome + rarity
+				local legacy = GameConfig.LegacySpecies[pet.Species]
+				local pool = legacy and GameConfig.GetSpeciesPool(legacy[1], legacy[2]) or {}
+				if #pool > 0 then
+					pet.Species = pool[math.random(#pool)].Id
+					pet.Name = nil
+					if pet.Slot and (not Slots.IsValid(pet.Slot, max) or used[pet.Slot]) then
+						pet.Slot = nil
+					elseif pet.Slot then
+						used[pet.Slot] = true
+					end
+				else
+					profile.Pets[uid] = nil
+				end
+			elseif pet.Slot and (not Slots.IsValid(pet.Slot, max) or used[pet.Slot]) then
 				pet.Slot = nil
 			elseif pet.Slot then
 				used[pet.Slot] = true
 			end
 		end
+		for id in pairs(profile.Index) do
+			if not GameConfig.GetSpecies(id) then
+				profile.Index[id] = nil
+			end
+		end
+		for _, pet in pairs(profile.Pets) do
+			if not profile.Index[pet.Species] then
+				profile.Index[pet.Species] = { First = os.time(), Count = 1 }
+			end
+		end
 		recalcIncome(player)
-		task.wait(0.5)
+		Services.EggService.Revalidate(player)
 		PetService.RefreshBase(player)
+		Services.DataService.Changed(player, "Pets", "Index")
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		for _, m in pairs(petModels[player] or {}) do

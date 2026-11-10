@@ -52,6 +52,7 @@ function handlers.Track(player, profile, category)
 	Services.BaseService.ApplyLevels(player)
 	Services.SpeedService.Apply(player)
 	Services.PetService.RefreshBase(player)
+	Services.EggService.Revalidate(player)
 	notify(player, ("%s upgraded to level %d!"):format(track.Label, nextLevel), "good")
 end
 
@@ -201,13 +202,12 @@ end
 function EconomyService.Start()
 	-- offline earnings
 	Services.DataService.OnLoaded(function(player, profile)
-		task.wait(2) -- let PetService rebuild the base first
 		local away = math.clamp(os.time() - (profile.LastOnline or os.time()), 0, E.OfflineIncomeCapSeconds)
 		local income = Services.PetService.GetIncome(player)
 		local earned = math.floor(away * income * E.OfflineIncomeRate)
 		if earned > 0 and player.Parent then
 			Services.DataService.AddCoins(player, earned, true)
-			notify(player, ("Welcome back! Your pets earned %s coins while you were away."):format(GameConfig.FormatNumber(earned)), "good")
+			notify(player, ("Welcome back! Your characters earned %s coins while you were away."):format(GameConfig.FormatNumber(earned)), "good")
 		end
 	end)
 

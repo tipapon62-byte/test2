@@ -1,6 +1,6 @@
 -- Components: UI constructors shared by every controller (windows, chunky buttons, badges, switches,
--- big outlined numbers, tabs, grids, cards, progress bars, dialogs, toasts, confetti, 3D pet
--- previews) plus the window manager.
+-- big outlined numbers, tabs, grids, cards, progress bars, dialogs, toasts, confetti, 3D character
+-- and egg previews) plus the window manager.
 --
 -- Layout model: every layer ScreenGui has a "Root" frame scaled with a UIScale so that a virtual
 -- canvas of roughly Theme.Design (1100x620) fills the screen. Children are laid out in virtual
@@ -34,6 +34,15 @@ local function lowGraphics(): boolean
 	return player:GetAttribute("LowGraphics") == true
 end
 Components.LowGraphics = lowGraphics
+
+-- Sound hook: SoundController replaces Components.Sound at start; UI code calls PlaySound.
+Components.Sound = function(_name: string) end
+function Components.PlaySound(name: string)
+	local ok, err = pcall(Components.Sound, name)
+	if not ok then
+		warn("[UI] sound", name, err)
+	end
+end
 
 -- ===== Generic helpers =====
 
@@ -195,6 +204,7 @@ function Components.Squash(btn: GuiButton)
 	btn.Activated:Connect(function()
 		s.Scale = 0.88
 		TweenService:Create(s, Theme.Tween.Bounce, { Scale = 1 }):Play()
+		Components.PlaySound("Click")
 	end)
 end
 
@@ -435,9 +445,13 @@ function Components.Button(opts: { [string]: any }): any
 		TweenService:Create(scale, Theme.Tween.Bounce, { Scale = 1 }):Play()
 		local now = os.clock()
 		if not info.Enabled or now - info.Last < 0.15 then
+			if not info.Enabled then
+				Components.PlaySound("Disabled")
+			end
 			return
 		end
 		info.Last = now
+		Components.PlaySound("Click")
 		if info.OnClick then
 			task.spawn(info.OnClick)
 		end
@@ -1100,7 +1114,7 @@ function Components.CurrencyLabel(kind: string, props: { [string]: any }?): any
 	return obj
 end
 
--- ===== 3D pet previews =====
+-- ===== 3D character / egg previews =====
 
 local modelFactory: any = nil
 local function getModelFactory(): any
@@ -1118,15 +1132,10 @@ local function getModelFactory(): any
 	return modelFactory
 end
 
+-- Fallback icons when a 3D model can't be built (characters only; no animals).
 local ARCHETYPE_EMOJI = {
-	Quadruped = "🐾",
-	Dino = "🦖",
-	Bird = "🐦",
-	Blob = "🫧",
-	Serpent = "🐍",
-	Bug = "🐞",
-	Floaty = "✨",
-	Golem = "🗿",
+	Hero = "🦸",
+	Boss = "👾",
 }
 
 local spinning: { [any]: any } = {}
@@ -1161,7 +1170,7 @@ local function fallbackIcon(parent: any, species: any, silhouette: boolean?)
 	Components.CornerScale(circle, 0.5)
 	Components.Stroke(circle, Theme.Colors.Stroke, 3)
 	Text({
-		Text = if silhouette then "?" else (species and ARCHETYPE_EMOJI[species.Archetype] or "🥚"),
+		Text = if silhouette then "?" else (species and (ARCHETYPE_EMOJI[species.Archetype] or "🦸") or "🥚"),
 		TextScaled = true,
 		Size = UDim2.fromScale(0.7, 0.7),
 		Position = UDim2.fromScale(0.15, 0.15),
@@ -1170,32 +1179,82 @@ local function fallbackIcon(parent: any, species: any, silhouette: boolean?)
 	})
 end
 
--- Builds a ViewportFrame showing a pet. pet = PetData-like ({Species, Size, Mutation, Tier}).
--- opts: Silhouette (black shape for undiscovered species), Spin (slow turntable), Size, Position, Parent.
-function Components.PetViewport(pet: { [string]: any }, opts: { [string]: any }?): any
-	local o = opts or {}
-	local holder = New("Frame", {
+local function previewHolder(o: { [string]: any }): any
+	return New("Frame", {
 		Name = "Preview",
 		BackgroundTransparency = 1,
 		Size = o.Size or UDim2.fromScale(1, 1),
 		Position = o.Position or UDim2.new(),
 		AnchorPoint = o.AnchorPoint or Vector2.zero,
 		LayoutOrder = o.LayoutOrder or 0,
+		ZIndex = o.ZIndex or 1,
 	})
-	local species = GameConfig.GetSpecies(pet.Species)
+end
+
+local function buildModel(fnName: string, ...): any
 	local mf = getModelFactory()
+	local fn = mf and mf[fnName]
+	if type(fn) ~= "function" then
+		return nil
+	end
+	local ok, res = pcall(fn, ...)
+	if ok and typeof(res) == "Instance" and (res:IsA("Model") or res:IsA("BasePart")) then
+		return res
+	end
+	return nil
+end
+
+local mountViewport: (holder: any, model: any, o: { [string]: any }) -> any
+
+-- ViewportFrame showing a character. pet = PetData-like ({Species, Size, Mutation, Tier}).
+-- opts: Silhouette (black shape for undiscovered characters), Spin (slow turntable), Size, Position,
+--       AnchorPoint, LayoutOrder, ZIndex, Parent.
+function Components.PetViewport(pet: { [string]: any }, opts: { [string]: any }?): any
+	local o = opts or {}
+	local holder = previewHolder(o)
+	local species = GameConfig.GetSpecies(pet.Species)
 	local model: any = nil
-	if mf and species then
-		local ok, res = pcall(mf.BuildPet, pet.Species, { Size = pet.Size, Mutation = pet.Mutation, Tier = pet.Tier })
-		if ok and typeof(res) == "Instance" and (res:IsA("Model") or res:IsA("BasePart")) then
-			model = res
-		end
+	if species then
+		model = buildModel("BuildPet", pet.Species, { Size = pet.Size, Mutation = pet.Mutation, Tier = pet.Tier })
 	end
 	if not model then
 		fallbackIcon(holder, species, o.Silhouette)
 		holder.Parent = o.Parent
 		return holder
 	end
+	return mountViewport(holder, model, o)
+end
+
+-- 3D preview of a character's own egg. egg = { Biome, Rarity, Species?, Size?, Mutation? }.
+-- Returns the holder; holder:FindFirstChild("Viewport") is nil when the 2D fallback was used.
+function Components.EggViewport(egg: { [string]: any }, opts: { [string]: any }?): any
+	local o = opts or {}
+	local holder = previewHolder(o)
+	local species = GameConfig.GetSpecies(egg.Species)
+	local biome = egg.Biome or (species and species.Biome) or "RiftLab"
+	local rarity = egg.Rarity or (species and species.Rarity) or "Common"
+	local model = buildModel("BuildEgg", biome, rarity, { Species = egg.Species, Size = egg.Size, Mutation = egg.Mutation })
+	if not model then
+		-- 2D egg in the character's colours
+		local colors = species and species.Colors or { Color3.new(1, 1, 1), Theme.Rarity(rarity) }
+		local shape = New("Frame", {
+			Name = "Fallback",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.62, 0.86),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			Parent = holder,
+		})
+		Components.CornerScale(shape, 0.5)
+		New("UIGradient", { Color = ColorSequence.new(colors[1], colors[2] or colors[1]), Rotation = 90, Parent = shape })
+		New("UIStroke", { Color = Theme.Rarity(rarity), Thickness = 3, Parent = shape })
+		holder.Parent = o.Parent
+		return holder
+	end
+	return mountViewport(holder, model, o)
+end
+
+mountViewport = function(holder: any, model: any, o: { [string]: any }): any
 	local vp = New("ViewportFrame", {
 		Name = "Viewport",
 		BackgroundTransparency = 1,
@@ -1203,6 +1262,7 @@ function Components.PetViewport(pet: { [string]: any }, opts: { [string]: any }?
 		Ambient = Color3.fromRGB(200, 200, 210),
 		LightColor = Color3.fromRGB(255, 250, 240),
 		LightDirection = Vector3.new(-0.6, -1, -0.5),
+		ZIndex = o.ZIndex or 1,
 		Parent = holder,
 	})
 	if o.Silhouette then
@@ -1404,6 +1464,7 @@ function Components.Open(name: string)
 		end
 	end
 	Components.Select(win.DefaultSelection or win.CloseButton)
+	Components.PlaySound("Open")
 	windowChanged:Fire(name, true)
 end
 
@@ -1418,6 +1479,7 @@ function Components.Close(name: string, switching: boolean?)
 		Components.CurrentWindow = nil
 	end
 	if not switching then
+		Components.PlaySound("Close")
 		getBackdrop().Visible = false
 		if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(win.Frame) then
 			GuiService.SelectedObject = nil
@@ -1748,6 +1810,24 @@ function Components.Toast(text: string, kind: string?, duration: number?)
 			toast:Destroy()
 		end
 	end)
+end
+
+-- Close the open window when the character dies (respawn starts with a clean screen).
+local function watchDeath(char: Model)
+	local hum = char:WaitForChild("Humanoid", 10)
+	if hum and hum:IsA("Humanoid") then
+		hum.Died:Connect(function()
+			if Components.CurrentWindow then
+				Components.Close(Components.CurrentWindow)
+			end
+		end)
+	end
+end
+player.CharacterAdded:Connect(function(char)
+	task.spawn(watchDeath, char)
+end)
+if player.Character then
+	task.spawn(watchDeath, player.Character)
 end
 
 return Components
