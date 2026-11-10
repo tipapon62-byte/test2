@@ -68,12 +68,12 @@ Theme.Icons = {
 	Speed = "⚡",
 	Income = "📈",
 	Egg = "🥚",
-	Hatch = "🐣",
+	Hatch = "🥚",
 	Shield = "🛡️",
 	Lock = "🔒",
 	Check = "✅",
 	Shop = "🛒",
-	Pets = "🐾",
+	Pets = "🦸",
 	Index = "📖",
 	Fuse = "🔮",
 	Daily = "🎁",
@@ -83,7 +83,7 @@ Theme.Icons = {
 	Settings = "⚙️",
 	Close = "✕",
 	Trap = "🪤",
-	Decoy = "🐔",
+	Decoy = "🎭",
 	Bat = "🏏",
 	Drop = "⬇️",
 	Event = "🌙",
@@ -133,6 +133,25 @@ end
 
 function Theme.Lighten(c: Color3, f: number): Color3
 	return c:Lerp(Color3.new(1, 1, 1), f)
+end
+
+-- Collectibles are multiverse characters, not animals: rewords older config text for display
+-- ("Hatch 5 pets" -> "Hatch 5 characters"). Internal ids are never passed through this.
+local REWORD = {
+	{ "Decoy Chicken Egg", "Decoy Egg" },
+	{ "%f[%a]Pets%f[%A]", "Characters" },
+	{ "%f[%a]pets%f[%A]", "characters" },
+	{ "%f[%a]Pet%f[%A]", "Character" },
+	{ "%f[%a]pet%f[%A]", "character" },
+	{ "%f[%a]Species%f[%A]", "Characters" },
+	{ "%f[%a]species%f[%A]", "characters" },
+}
+function Theme.Reword(text: string?): string
+	local s = tostring(text or "")
+	for _, r in ipairs(REWORD) do
+		s = s:gsub(r[1], r[2])
+	end
+	return s
 end
 
 -- Readable text colour on top of `bg`.
