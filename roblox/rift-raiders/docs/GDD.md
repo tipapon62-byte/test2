@@ -48,17 +48,17 @@ Biomes are physically separated by force-field **gates** (server-enforced: under
 ### Guardians
 One per `GuardianHome` (up to 4 per zone). Stats per biome in [§9](#9-balance). Behaviour: Patrol (wander near home) → Alert "!" (0.35 s) → Chase (speed = biome speed × rarity multiplier × size bonus × event multiplier) → Attack (range, cooldown, knockback, ragdoll, egg drop) → Stunned 2.5 s → Return "?" → Patrol. Detection radius + line of sight (map walls/decor block sight); gives up after 3 s without sight, when the thief leaves the aggression (leash) zone, or enters any base. Guardians are clamped inside their zone, so they physically can't reach a base.
 
-### Pets
-66 species: 38 original creatures plus the **28 classic characters** of the original place (Mad Science, Yellow Town, Bikini Deep, Meme Universe and Anime Dimension casts and the 3 Multiverse secrets), now hatchable from eggs of the matching biome and restyled by `ModelFactory` in a chunky LEGO-brick look. Each pet has species, rarity, size, mutation, fusion tier (★), weight (kg), name (optional, filtered), model and income.
+### Characters (collectibles)
+**No animals** — every collectible is a character from somewhere in the multiverse: the **28 classic characters** of the original place plus **17 original heroes** (brick minifigures dressed by a costume system: hats, faces, outfits, backpacks, held items, auras) — 45 in total, one rarity ladder per biome. **Every character has its own egg** styled after it (colours, mini hat/hair on top, peeking eyes for Epic+); a nest first rolls a rarity, then picks the character, so you always know who is inside ("Donut Dad Egg"). Each character has rarity, size, mutation, fusion tier (★), weight, optional filtered name, model and income. Old saves: animal pets from earlier builds are converted into a character of the same biome and rarity.
 
 ### Hub & base feel
-* Bases are 4× smaller in area than in the original map (compact, readable, quick to cross).
+* Full-size bases sit right next to a compact hub road (the road is half as wide as in the original map) and a half-size spawn plaza.
 * The hub **speed lanes** (chevron road) give ×1.7 walk speed while you're on them; the **conveyor belt** carries you toward the Rift Run.
 * The treadmill belt moves under you while you run (run in place, ×Efficiency gain); standing still still trains (AFK gain) without being pushed off. Floating "+N ⚡" popups show training.
 * Epic+ eggs in nests shoot a tall light beacon visible from far away; hatching eggs wobble, crack and glow harder as the timer runs out.
 
 ### Pets (stats)
-Classic characters keep their names and look; the 38 original species use 8 procedural archetypes.
+Classic characters are restyled from their original part models; original heroes are procedural minifigures. Guardians are giant humanoid brick bosses (Professor Beakerbot, Old Man Rootbeard, Captain Brinejaw, Sheriff Sandstorm, Vine Warlord Thorn, Magma Titan Ignis, Frost Giant Hrimm, The Starbound Warden).
 `income = biome.IncomeBase × rarity.IncomeMult × size.IncomeMult × mutation.IncomeMult × tierMult` then × base bonus × rebirth bonus.
 The **Index** shows every species per biome; first discovery pays Rift Shards (1–50 by rarity), completing a biome pays 40.
 

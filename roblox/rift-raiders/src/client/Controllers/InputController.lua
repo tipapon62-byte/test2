@@ -85,6 +85,7 @@ function InputController.Tag()
 	if fx and fx.PlaySwing then
 		fx.PlaySwing()
 	end
+	Components.PlaySound("Swing")
 end
 
 function InputController.Drop()

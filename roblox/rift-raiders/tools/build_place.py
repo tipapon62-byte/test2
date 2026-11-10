@@ -208,7 +208,76 @@ def part_pos(item, part_name):
     return None
 
 
-BASE_SCALE = 0.5  # personal bases are 4x smaller in area than in the original map
+BASE_SCALE = 1.0  # bases keep their original size
+
+# The hub road is squeezed toward its centre line (Z = 0): the centre strip (belt, portals) stays,
+# the lanes/walkways/sidewalks become half as wide, and everything beyond the road (bases, shop,
+# trees) slides inward by the width that was removed.
+ROAD_KEEP = 9.0
+ROAD_EDGE = 75.0
+ROAD_SQUEEZE = 0.5
+ROAD_SHIFT = (ROAD_EDGE - ROAD_KEEP) * (1 - ROAD_SQUEEZE)
+
+
+def squeeze_z(z):
+    a = abs(z)
+    s = 1 if z >= 0 else -1
+    if a <= ROAD_KEEP:
+        return z
+    if a <= ROAD_EDGE:
+        return s * (ROAD_KEEP + (a - ROAD_KEEP) * ROAD_SQUEEZE)
+    return z - s * ROAD_SHIFT
+
+
+def _rot(cf):
+    return [float(cf.find(k).text) for k in ("R00", "R01", "R02", "R10", "R11", "R12", "R20", "R21", "R22")]
+
+
+def squeeze_road(item, shift_only=False):
+    """Applies squeeze_z to every part / pivot in the subtree. Axis-aligned parts inside the road
+    band also get their Z size squeezed. shift_only moves whole subtrees rigidly (bases)."""
+    for it in item.iter("Item"):
+        p = props(it)
+        if p is None:
+            continue
+        cls = it.get("class")
+        cf_el, size_el = None, None
+        for prop in p:
+            n = prop.get("name")
+            if prop.tag == "CoordinateFrame" and n == "CFrame" and cls in BASEPARTS:
+                cf_el = prop
+            elif prop.tag == "Vector3" and n == "size" and cls in BASEPARTS:
+                size_el = prop
+            elif prop.tag == "OptionalCoordinateFrame" and n == "WorldPivotData":
+                pc = prop.find("CFrame")
+                if pc is not None and pc.find("Z") is not None:
+                    z = float(pc.find("Z").text)
+                    pc.find("Z").text = repr(z - (1 if z >= 0 else -1) * ROAD_SHIFT if shift_only else squeeze_z(z))
+        if cf_el is None:
+            continue
+        ze = cf_el.find("Z")
+        z = float(ze.text)
+        if shift_only:
+            ze.text = repr(z - (1 if z >= 0 else -1) * ROAD_SHIFT)
+            continue
+        ze.text = repr(squeeze_z(z))
+        if size_el is None:
+            continue
+        r = _rot(cf_el)
+        # world Z extent comes from the local axis whose column has a ±1 in the Z row
+        zrow = r[6:9]
+        axis = None
+        for i, v in enumerate(zrow):
+            if abs(abs(v) - 1) < 1e-3:
+                axis = i
+        if axis is None:
+            continue
+        key = ("X", "Y", "Z")[axis]
+        se = size_el.find(key)
+        half = float(se.text) / 2
+        lo, hi = squeeze_z(z - half), squeeze_z(z + half)
+        if abs(z) <= ROAD_EDGE + half:
+            se.text = repr(max(0.05, hi - lo))
 
 
 def rojo_build(out):
@@ -240,13 +309,26 @@ def main():
         if c is not None:
             rs.remove(c)
 
-    # ---- 1b. shrink the personal bases about their entrance (the road side stays in place)
+    # ---- 1b. compact hub: narrower road, bases pulled in, smaller spawn plaza
     bases = path(root, "Workspace", "Bases")
     if bases is not None:
         for b in items(bases):
-            mat = part_pos(b, "EntranceMat") or part_pos(b, "Floor")
-            if mat:
-                scale_about(b, (mat[0], 0.0, mat[2]), BASE_SCALE)
+            squeeze_road(b, shift_only=True)
+    hub = path(root, "Workspace", "Hub")
+    if hub is not None:
+        plaza = child(hub, "MultiversePlaza")
+        if plaza is not None:
+            centre = part_pos(plaza, "PlazaFloor") or (-380.0, 0.0, 0.0)
+            scale_about(plaza, (centre[0], 0.0, centre[2]), 0.5)
+            shift(plaza, 31.5)  # keep the road-side edge where it was
+        for c in items(hub):
+            if c is not plaza:
+                squeeze_road(c)
+    for n in ("Conveyor", "Portals"):
+        node = path(root, "Workspace", n)
+        if node is not None:
+            squeeze_road(node)
+    spawn = path(root, "Workspace", "SpawnLocation")
 
     # ---- 2. re-theme the Rift Run
     zones = path(root, "Workspace", "RiftRun", "Zones")
